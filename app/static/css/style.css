@@ -24,13 +24,18 @@
 
 /* Base resets and fonts */
 body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, -apple-system, sans-serif;
     background-color: var(--bg-light);
     color: var(--text-color-light);
     transition: background-color var(--transition-speed), color var(--transition-speed);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+h1, h2, h3, h4, h5, h6, .navbar-brand, .sidebar-header, .stat-value {
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: -0.02em;
 }
 
 body[data-theme="dark"] {
