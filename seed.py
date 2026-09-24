@@ -77,11 +77,12 @@ def seed_database():
                 print(f"Added Setting: {key} = {val_info[0]}")
         db.session.commit()
 
-        # 3. Seed Branches
+        # 3. Seed Branches (4 Core Regional Hubs)
         branches_data = [
             Branch(name="Mumbai Main Hub", code="BOM01", address="Andheri East, Off Western Express Highway", city="Mumbai", state="Maharashtra", zip_code="400069", phone="+91 22 5550 1122", email="mumbai@logitrack.com"),
             Branch(name="Delhi Central Office", code="DEL01", address="Connaught Place, Block E", city="New Delhi", state="Delhi", zip_code="110001", phone="+91 11 5550 3344", email="delhi@logitrack.com"),
-            Branch(name="Bangalore Tech Branch", code="BLR01", address="Outer Ring Road, Kadubeesanahalli", city="Bangalore", state="Karnataka", zip_code="560103", phone="+91 80 5550 5566", email="bangalore@logitrack.com")
+            Branch(name="Bangalore Tech Branch", code="BLR01", address="Outer Ring Road, Kadubeesanahalli", city="Bangalore", state="Karnataka", zip_code="560103", phone="+91 80 5550 5566", email="bangalore@logitrack.com"),
+            Branch(name="Mangalore Coast Hub", code="MAN01", address="Hampankatta, Near Old Port", city="Mangalore", state="Karnataka", zip_code="575001", phone="+91 824 5550 7788", email="mangalore@logitrack.com")
         ]
 
         branches = []
