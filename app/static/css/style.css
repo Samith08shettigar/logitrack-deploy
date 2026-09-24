@@ -484,3 +484,123 @@ body[data-theme="dark"] .log-timeline-item::before {
     transform: translateY(-8px);
     box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1) !important;
 }
+
+/* ==========================================================================
+   Mobile-First Responsive Dashboard & Navigation Enhancements
+   ========================================================================== */
+
+@media (max-width: 991.98px) {
+    /* Stack container vertically on mobile */
+    .dashboard-container {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        position: relative;
+    }
+
+    /* Convert static sidebar into a slide-in offcanvas drawer */
+    .sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        width: 280px !important;
+        max-width: 85vw !important;
+        height: 100vh !important;
+        z-index: 1060 !important;
+        transform: translateX(-100%) !important;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        box-shadow: 6px 0 30px rgba(0, 0, 0, 0.35) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sidebar.show {
+        transform: translateX(0) !important;
+    }
+
+    /* Backdrop dim overlay when sidebar is open */
+    .sidebar-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 1050;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .sidebar-backdrop.show {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* Main Dashboard View Padding on Phones */
+    .main-content {
+        width: 100% !important;
+        padding: 0 !important;
+        flex: 1;
+    }
+
+    .main-content > .container-fluid {
+        padding: 0.85rem !important;
+    }
+
+    /* Top Sticky Navigation Bar on Mobile */
+    .top-navbar {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 1030 !important;
+        padding: 0.65rem 0.85rem !important;
+        background: var(--card-bg-light) !important;
+        border-bottom: 1px solid var(--border-color-light) !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+    }
+
+    body[data-theme="dark"] .top-navbar {
+        background: var(--card-bg-dark) !important;
+        border-bottom-color: var(--border-color-dark) !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    /* KPI Metric Cards Mobile Adjustments */
+    .kpi-card {
+        border-radius: 12px !important;
+        border: 1px solid var(--border-color-light) !important;
+    }
+
+    body[data-theme="dark"] .kpi-card {
+        border-color: var(--border-color-dark) !important;
+    }
+
+    .kpi-card .card-body {
+        padding: 0.75rem 0.5rem !important;
+    }
+
+    .kpi-icon {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1rem !important;
+        border-radius: 10px !important;
+    }
+
+    /* Table Mobile Optimizations */
+    .table-responsive {
+        border-radius: 10px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .custom-table th, 
+    .custom-table td {
+        padding: 0.65rem 0.75rem !important;
+        font-size: 0.82rem !important;
+        white-space: nowrap !important;
+    }
+}
+

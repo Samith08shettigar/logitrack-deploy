@@ -37,15 +37,21 @@
     </div>
 
     {% if current_user %}
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
     <!-- Dashboard Panel Layout -->
     <div class="dashboard-container">
-        <!-- Sidebar Navigation -->
+        <!-- Sidebar Navigation (Drawer on Mobile, Static on Desktop) -->
         <aside class="sidebar">
-            <div class="sidebar-header">
+            <div class="sidebar-header d-flex align-items-center justify-content-between">
                 <a href="/" class="text-white text-decoration-none d-flex align-items-center">
                     <i class="fa-solid fa-truck-ramp-box fa-lg me-2 text-warning"></i>
                     <span class="fs-5 fw-bold">LogiTrack</span>
                 </a>
+                <button class="btn btn-sm btn-link text-white-50 d-lg-none text-decoration-none p-0" id="sidebar-close-btn" aria-label="Close Navigation">
+                    <i class="fa-solid fa-xmark fs-5"></i>
+                </button>
             </div>
             
             <ul class="sidebar-menu mt-3">
@@ -143,9 +149,18 @@
         <main class="main-content">
             <!-- Top Dashboard Navbar -->
             <header class="top-navbar d-flex align-items-center justify-content-between">
-                <div>
-                    <h5 class="mb-0 fw-bold d-none d-sm-block">Welcome back, <span class="text-primary">{{ current_user.username }}</span></h5>
-                    <small class="text-muted d-none d-md-block">Role Privilege: <span class="badge bg-secondary">{{ current_user.role.name }}</span></small>
+                <div class="d-flex align-items-center">
+                    <!-- Mobile Hamburger Button to open sidebar drawer -->
+                    <button class="btn btn-outline-secondary btn-sm d-lg-none me-2 px-2 py-1" id="sidebar-toggle" title="Open Navigation Menu" aria-label="Open Navigation">
+                        <i class="fa-solid fa-bars fa-lg"></i>
+                    </button>
+                    <a href="/" class="d-lg-none text-decoration-none fw-bold text-primary fs-6 d-flex align-items-center">
+                        <i class="fa-solid fa-truck-ramp-box text-warning me-1"></i> LogiTrack
+                    </a>
+                    <div class="d-none d-lg-block">
+                        <h5 class="mb-0 fw-bold">Welcome back, <span class="text-primary">{{ current_user.username }}</span></h5>
+                        <small class="text-muted">Role Privilege: <span class="badge bg-secondary">{{ current_user.role.name }}</span></small>
+                    </div>
                 </div>
                 
                 <div class="d-flex align-items-center gap-3">
@@ -294,6 +309,50 @@
             toastElList.forEach(toastEl => {
                 const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 });
                 toast.show();
+            });
+
+            // Mobile Sidebar Drawer Toggle Controller
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+            const sidebarEl = document.querySelector('.sidebar');
+            const backdropEl = document.getElementById('sidebar-backdrop');
+
+            function toggleSidebar(show) {
+                if (!sidebarEl || !backdropEl) return;
+                if (show) {
+                    sidebarEl.classList.add('show');
+                    backdropEl.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    sidebarEl.classList.remove('show');
+                    backdropEl.classList.remove('show');
+                    document.body.style.overflow = '';
+                }
+            }
+
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isOpen = sidebarEl.classList.contains('show');
+                    toggleSidebar(!isOpen);
+                });
+            }
+
+            if (sidebarCloseBtn) {
+                sidebarCloseBtn.addEventListener('click', () => toggleSidebar(false));
+            }
+
+            if (backdropEl) {
+                backdropEl.addEventListener('click', () => toggleSidebar(false));
+            }
+
+            // Close sidebar when clicking menu links on mobile screens
+            document.querySelectorAll('.sidebar-menu-item a').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth < 992) {
+                        toggleSidebar(false);
+                    }
+                });
             });
         });
     </script>
