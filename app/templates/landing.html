@@ -2,7 +2,129 @@
 
 {% block title %}Welcome to LogiTrack - Logistics & Shipment Management{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/splash.css') }}">
+{% endblock %}
+
 {% block public_content %}
+<!-- Welcome Intro Animation (Splash Screen - 3.0s Ultra-Smooth Intro) -->
+<div id="splash-screen" class="splash-screen-overlay">
+    <div class="splash-bg-glow"></div>
+    <div class="splash-content">
+        <div class="splash-logo-container">
+            <svg class="splash-svg" viewBox="0 0 800 260" width="100%" height="100%">
+                <defs>
+                    <!-- Box Cutout Mask -->
+                    <mask id="box-mask">
+                        <rect x="-50" y="-50" width="100" height="100" fill="#ffffff" />
+                        <rect x="-13" y="-22" width="6" height="7" fill="#000000" />
+                    </mask>
+                    <!-- Neon glow filter -->
+                    <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="5" result="blur" />
+                        <feMerge>
+                            <feMergeNode in="blur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                    <radialGradient id="emblem-glow" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.15" />
+                        <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+                    </radialGradient>
+                </defs>
+                
+                <!-- Background Emblem Glow -->
+                <circle cx="400" cy="85" r="95" fill="url(#emblem-glow)" class="emblem-glow-circle" />
+
+                <!-- 1. Hexagon Frame -->
+                <polygon points="400,15 473.6,57.5 473.6,142.5 400,185 326.4,142.5 326.4,57.5" 
+                         class="emblem-hex" />
+                
+                <!-- 2. Pristine Official Company Logo inside Hexagon -->
+                <g id="static-official-logo" transform="translate(400, 85) scale(1.3)">
+                    <!-- Ramp -->
+                    <rect x="-42" y="14" width="60" height="7" rx="3.5" transform="rotate(-15 0 17)" fill="#f59e0b" />
+                    <!-- Cargo Box -->
+                    <rect x="-22" y="-22" width="24" height="24" rx="2" fill="#f59e0b" mask="url(#box-mask)" transform="rotate(-15 -10 -5)" />
+                    <!-- Cab -->
+                    <path d="M 12,-15 L 35,-15 C 39,-15 42,-12 42,-8 L 42,22 L 38,22 C 38,15 33,10 27,10 C 21,10 16,15 16,22 L 12,22 Z" fill="#f59e0b" />
+                    <!-- Wheel -->
+                    <circle cx="27" cy="22" r="10" fill="#0c1220" stroke="#f59e0b" stroke-width="2" />
+                </g>
+
+                <!-- 3. Road Line under Mover Truck -->
+                <line x1="100" y1="208" x2="700" y2="208" class="road-line" />
+
+                <!-- 4. Moving Road Traveler / Mover Truck -->
+                <g id="moving-track-mover">
+                    <!-- Cargo Container -->
+                    <rect x="-55" y="-28" width="110" height="52" rx="4" class="mover-truck-cargo" />
+                    <text x="0" y="4" text-anchor="middle" class="mover-brand-text">LogiTrack</text>
+                    
+                    <!-- Cabin -->
+                    <path d="M 55,-22 L 85,-22 C 92,-22 98,-15 99,-7 L 100,24 C 100,26 98,28 96,28 L 55,28 Z" class="mover-truck-cabin" />
+                    <!-- Windshield Window -->
+                    <path d="M 64,-17 L 80,-17 C 84,-17 87,-14 88,-9 L 89,2 L 64,2 Z" class="mover-truck-window" />
+                    <!-- Chassis -->
+                    <rect x="-60" y="28" width="164" height="4" rx="2" fill="#1e293b" class="mover-truck-chassis" />
+                    
+                    <!-- Spinning Wheels -->
+                    <g transform="translate(-45, 32)">
+                        <g class="mover-wheel-spin">
+                            <circle cx="0" cy="0" r="12" class="mover-wheel-tire" />
+                            <circle cx="0" cy="0" r="10.5" fill="none" stroke="#3f3f46" stroke-width="0.8" stroke-dasharray="2 2" />
+                            <circle cx="0" cy="0" r="7" class="mover-wheel-rim" />
+                            <line x1="-5" y1="0" x2="5" y2="0" class="mover-wheel-spoke" />
+                            <line x1="0" y1="-5" x2="0" y2="5" class="mover-wheel-spoke" />
+                            <circle cx="0" cy="0" r="2.5" class="mover-wheel-bolt" />
+                        </g>
+                    </g>
+                    <g transform="translate(75, 32)">
+                        <g class="mover-wheel-spin">
+                            <circle cx="0" cy="0" r="12" class="mover-wheel-tire" />
+                            <circle cx="0" cy="0" r="10.5" fill="none" stroke="#3f3f46" stroke-width="0.8" stroke-dasharray="2 2" />
+                            <circle cx="0" cy="0" r="7" class="mover-wheel-rim" />
+                            <line x1="-5" y1="0" x2="5" y2="0" class="mover-wheel-spoke" />
+                            <line x1="0" y1="-5" x2="0" y2="5" class="mover-wheel-spoke" />
+                            <circle cx="0" cy="0" r="2.5" class="mover-wheel-bolt" />
+                        </g>
+                    </g>
+                </g>
+
+                <!-- Pulsing Radar Ring -->
+                <polygon points="400,10 477.9,55 477.9,145 400,190 322.1,145 322.1,55" 
+                         fill="none" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 6" class="radar-hex" />
+            </svg>
+            
+            <!-- Brand Typography with No-Wrap & Mobile Clamp -->
+            <div id="logo-text-group">
+                <h1 class="splash-logo-title" id="logo-text">
+                    <span class="char c-1">L</span>
+                    <span class="char c-2">o</span>
+                    <span class="char c-3">g</span>
+                    <span class="char c-4">i</span>
+                    <span class="char c-5 font-extrabold">T</span>
+                    <span class="char c-6 font-extrabold">r</span>
+                    <span class="char c-7 font-extrabold">a</span>
+                    <span class="char c-8 font-extrabold">c</span>
+                    <span class="char c-9 font-extrabold">k</span>
+                </h1>
+                <p class="splash-logo-subtitle" id="logo-subtext">Logistics & Shipment Solutions</p>
+            </div>
+        </div>
+        
+        <!-- Progress Bar & Status Text -->
+        <div class="splash-loader-bar">
+            <div class="splash-loader-progress"></div>
+        </div>
+        <div class="splash-tagline" id="splash-status-text">Initializing LogiTrack Systems...</div>
+    </div>
+    
+    <button id="skip-splash-btn" type="button">
+        SKIP INTRO <i class="fa-solid fa-angles-right ms-1"></i>
+    </button>
+</div>
+
 <!-- Hero Banner Segment -->
 <div class="bg-primary text-white py-5 position-relative" style="background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-light) 100%) !important;">
     <div class="container py-5 text-center text-lg-start">
@@ -24,6 +146,13 @@
                             <button type="submit" class="btn btn-warning w-100 fw-bold text-dark"><i class="fa-solid fa-magnifying-glass-location me-1"></i> Track Cargo</button>
                         </div>
                     </form>
+                </div>
+                
+                <!-- Replay Splash Intro Link -->
+                <div class="mt-3 text-center text-lg-start">
+                    <a href="#" id="replay-intro-btn" class="text-white-50 text-decoration-none small hover-white">
+                        <i class="fa-solid fa-circle-play me-1"></i> Replay Welcome Animation
+                    </a>
                 </div>
             </div>
             
@@ -74,4 +203,119 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Welcome Splash Screen Controller JS (Exactly 3.0 Seconds Duration)
+    (function() {
+        const splashScreen = document.getElementById('splash-screen');
+        const skipBtn = document.getElementById('skip-splash-btn');
+        const statusText = document.getElementById('splash-status-text');
+        let activeTimeout = null;
+        let activeIntervals = [];
+
+        const closeSplash = () => {
+            if (splashScreen && !splashScreen.classList.contains('fade-out')) {
+                splashScreen.classList.add('fade-out');
+                document.body.classList.remove('splash-active');
+                document.body.style.overflow = '';
+                document.body.style.overflowY = 'auto';
+                setTimeout(() => {
+                    splashScreen.classList.add('hidden');
+                }, 400);
+            }
+        };
+
+        const runSplashSequence = () => {
+            if (!splashScreen) return;
+            
+            // Lock body scroll during splash animation
+            document.body.classList.add('splash-active');
+            document.body.style.overflow = 'hidden';
+            splashScreen.classList.remove('hidden', 'fade-out');
+
+            // Reset elements for CSS animation rerun
+            const progress = splashScreen.querySelector('.splash-loader-progress');
+            const subtitle = splashScreen.querySelector('.splash-logo-subtitle');
+            const chars = splashScreen.querySelectorAll('.char');
+            const hex = splashScreen.querySelector('.emblem-hex');
+            const radar = splashScreen.querySelector('.radar-hex');
+            const wheels = splashScreen.querySelectorAll('.mover-wheel-spin');
+            const glow = splashScreen.querySelector('.emblem-glow-circle');
+            const roadLine = splashScreen.querySelector('.road-line');
+            const moverTruck = document.getElementById('moving-track-mover');
+            const staticLogo = document.getElementById('static-official-logo');
+
+            const animElements = [progress, subtitle, hex, radar, glow, roadLine, moverTruck, staticLogo, ...chars, ...wheels];
+            animElements.forEach(el => {
+                if (el) {
+                    el.style.animation = 'none';
+                    el.offsetHeight; // trigger reflow
+                    el.style.animation = '';
+                }
+            });
+
+            // Clear any active timer intervals/timeouts from previous run
+            activeIntervals.forEach(id => clearTimeout(id));
+            activeIntervals = [];
+
+            // Progression messages spaced across 3.0s
+            const taglines = [
+                { time: 0, text: "Initializing LogiTrack Systems..." },
+                { time: 700, text: "Constructing cargo routing grid..." },
+                { time: 1400, text: "Connecting warehouse nodes..." },
+                { time: 2100, text: "Securing logistics database..." },
+                { time: 2600, text: "Systems Active. Welcome to LogiTrack!" }
+            ];
+
+            taglines.forEach(item => {
+                const tid = setTimeout(() => {
+                    if (statusText && !splashScreen.classList.contains('fade-out')) {
+                        statusText.style.opacity = 0;
+                        setTimeout(() => {
+                            statusText.innerText = item.text;
+                            statusText.style.opacity = 1;
+                        }, 80);
+                    }
+                }, item.time);
+                activeIntervals.push(tid);
+            });
+
+            // Exactly 3.0 seconds total intro
+            activeTimeout = setTimeout(closeSplash, 3000);
+        };
+
+        // Initialize on page load (tap anywhere to skip)
+        if (splashScreen) {
+            runSplashSequence();
+
+            splashScreen.addEventListener('click', (e) => {
+                if (activeTimeout) clearTimeout(activeTimeout);
+                activeIntervals.forEach(id => clearTimeout(id));
+                closeSplash();
+            });
+        }
+
+        // Hook up skip button
+        if (skipBtn) {
+            skipBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (activeTimeout) clearTimeout(activeTimeout);
+                activeIntervals.forEach(id => clearTimeout(id));
+                closeSplash();
+            });
+        }
+
+        // Hook up replay button
+        const replayBtn = document.getElementById('replay-intro-btn');
+        if (replayBtn) {
+            replayBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (activeTimeout) clearTimeout(activeTimeout);
+                runSplashSequence();
+            });
+        }
+    })();
+</script>
 {% endblock %}
