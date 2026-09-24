@@ -85,38 +85,51 @@ def list_customers():
 @role_required('Administrator')
 def add_customer():
     if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        phone = request.form.get('phone')
+        username = (request.form.get('username') or '').strip()
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
+        phone = (request.form.get('phone') or '').strip()
         status = request.form.get('status', 'Active')
         
         if not username or not email or not password or not phone:
             flash("All fields are required.", "warning")
             return redirect(url_for('admin.add_customer'))
             
-        existing = User.query.filter((User.username == username) | (User.email == email)).first()
+        existing = User.query.filter(
+            (db.func.lower(User.username) == db.func.lower(username)) | 
+            (db.func.lower(User.email) == db.func.lower(email))
+        ).first()
         if existing:
             flash("Username or email already exists.", "warning")
             return redirect(url_for('admin.add_customer'))
             
         role = Role.query.filter_by(name='Customer').first()
+        if not role:
+            role = Role(name='Customer', description='End customer booking shipments')
+            db.session.add(role)
+            db.session.commit()
+            
         try:
-            user = User(username=username, email=email, role_id=role.id)
+            user = User(username=username, email=email, role_id=role.id, is_active=True)
             user.set_password(password)
             db.session.add(user)
-            db.session.commit()
+            db.session.flush()
             
             customer = Customer(user_id=user.id, phone=phone, status=status)
             db.session.add(customer)
             db.session.commit()
             
-            log_activity(g.user.id, "Create Customer", f"Created customer profile for {username}", request.remote_addr)
+            try:
+                log_activity(g.user.id, "Create Customer", f"Created customer profile for {username}", request.remote_addr)
+            except Exception:
+                pass
+                
             flash("Customer added successfully!", "success")
             return redirect(url_for('admin.list_customers'))
         except Exception as e:
             db.session.rollback()
-            flash("Failed to add customer.", "danger")
+            print(f"[Admin Add Customer Error] {e}")
+            flash(f"Failed to add customer: {e}", "danger")
             
     return render_template('admin/customer_form.html', action="Add")
 
@@ -206,11 +219,11 @@ def add_driver():
         vehicles = Vehicle.query.all()
     
     if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        phone = request.form.get('phone')
-        license_number = request.form.get('license_number')
+        username = (request.form.get('username') or '').strip()
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
+        phone = (request.form.get('phone') or '').strip()
+        license_number = (request.form.get('license_number') or '').strip()
         branch_id = request.form.get('branch_id')
         vehicle_id = request.form.get('vehicle_id')
         status = request.form.get('status', 'Available')
@@ -220,17 +233,25 @@ def add_driver():
             flash("Required fields missing.", "warning")
             return redirect(url_for('admin.add_driver'))
             
-        existing = User.query.filter((User.username == username) | (User.email == email)).first()
+        existing = User.query.filter(
+            (db.func.lower(User.username) == db.func.lower(username)) | 
+            (db.func.lower(User.email) == db.func.lower(email))
+        ).first()
         if existing:
             flash("User already exists.", "warning")
             return redirect(url_for('admin.add_driver'))
             
         role = Role.query.filter_by(name='Driver').first()
+        if not role:
+            role = Role(name='Driver', description='Fleet delivery driver')
+            db.session.add(role)
+            db.session.commit()
+            
         try:
-            user = User(username=username, email=email, role_id=role.id)
+            user = User(username=username, email=email, role_id=role.id, is_active=True)
             user.set_password(password)
             db.session.add(user)
-            db.session.commit()
+            db.session.flush()
             
             driver = Driver(
                 user_id=user.id,
@@ -249,12 +270,18 @@ def add_driver():
                     veh.availability = 'In Use'
                     
             db.session.commit()
-            log_activity(g.user.id, "Create Driver", f"Created driver profile for {username}", request.remote_addr)
+            
+            try:
+                log_activity(g.user.id, "Create Driver", f"Created driver profile for {username}", request.remote_addr)
+            except Exception:
+                pass
+                
             flash("Driver added successfully!", "success")
             return redirect(url_for('admin.list_drivers'))
         except Exception as e:
             db.session.rollback()
-            flash("Failed to add driver. Check details (e.g. License/Vehicle duplicates).", "danger")
+            print(f"[Admin Add Driver Error] {e}")
+            flash(f"Failed to add driver. Ensure license number and email/username are unique.", "danger")
             
     return render_template('admin/driver_form.html', action="Add", branches=branches, vehicles=vehicles)
 
@@ -568,9 +595,9 @@ def list_employees():
 def add_employee():
     roles = Role.query.filter(Role.name.in_(['Administrator', 'Branch Manager'])).all()
     if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
+        username = (request.form.get('username') or '').strip()
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
         role_id = request.form.get('role_id')
         branch_id = request.form.get('branch_id')
         is_active = request.form.get('is_active') == 'on'
@@ -585,9 +612,12 @@ def add_employee():
         else:
             branch_id = int(branch_id) if branch_id else None
             
-        existing = User.query.filter((User.username == username) | (User.email == email)).first()
+        existing = User.query.filter(
+            (db.func.lower(User.username) == db.func.lower(username)) | 
+            (db.func.lower(User.email) == db.func.lower(email))
+        ).first()
         if existing:
-            flash("User already exists.", "warning")
+            flash("User with that username or email already exists.", "warning")
             return redirect(url_for('admin.add_employee'))
             
         try:
@@ -595,12 +625,18 @@ def add_employee():
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
-            log_activity(g.user.id, "Create Employee", f"Created employee {username}", request.remote_addr)
+            
+            try:
+                log_activity(g.user.id, "Create Employee", f"Created employee {username}", request.remote_addr)
+            except Exception:
+                pass
+                
             flash("Employee added successfully!", "success")
             return redirect(url_for('admin.list_employees'))
         except Exception as e:
             db.session.rollback()
-            flash("Failed to add employee.", "danger")
+            print(f"[Admin Add Employee Error] {e}")
+            flash("Failed to add employee. Please try again.", "danger")
             
     branches = Branch.query.all()
     return render_template('admin/employee_form.html', action="Add", roles=roles, branches=branches)
