@@ -91,16 +91,30 @@ body[data-theme="dark"] .glass-card {
     list-style: none;
     padding: 0;
     margin: 0;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+}
+
+.sidebar-menu-item {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    clear: both;
 }
 
 .sidebar-menu-item a {
-    display: flex;
+    display: flex !important;
     align-items: center;
+    width: 100% !important;
+    box-sizing: border-box !important;
     padding: 12px 24px;
     color: rgba(255, 255, 255, 0.75);
     text-decoration: none;
     transition: all 0.2s ease;
     border-left: 4px solid transparent;
+    white-space: nowrap;
 }
 
 .sidebar-menu-item a:hover,
@@ -114,6 +128,7 @@ body[data-theme="dark"] .glass-card {
     width: 24px;
     font-size: 1.1rem;
     margin-right: 12px;
+    flex-shrink: 0;
 }
 
 /* Main Dashboard content layout */
