@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - LogiTrack{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payment-tab-btn {
+        border-radius: 10px;
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        background: #f8fafc;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 600;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        justify-content: center;
+    }
+    .payment-tab-btn:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+    .payment-tab-btn.active {
+        background: #eff6ff;
+        border-color: var(--primary-color, #2563eb);
+        color: var(--primary-color, #2563eb);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    }
+    .upi-app-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #334155;
+    }
+    .qr-box-wrapper {
+        background: linear-gradient(145deg, #f8fafc, #ffffff);
+        border: 2px dashed #93c5fd;
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left Column: Invoice Billing Details -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm kpi-card p-4">
+            <h5 class="fw-bold text-primary mb-4"><i class="fa-solid fa-receipt me-2"></i>Logistics Invoice Summary</h5>
+            
+            <div class="mb-4">
+                <span class="text-muted small">Tracking Code</span>
+                <h4 class="fw-bold text-dark font-monospace">{{ shipment.tracking_number }}</h4>
+            </div>
+            
+            <div class="d-flex flex-column gap-2 mb-4 small">
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">Origin Address</span>
+                    <span>{{ shipment.pickup_city }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">Receiver Destination</span>
+                    <span>{{ shipment.receiver_city }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">Package Weight</span>
+                    <span>{{ shipment.package_weight }} kg</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">Delivery Speed</span>
+                    <span>{{ shipment.delivery_type }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">Insurance Surcharge</span>
+                    <span>{{ '₹15.00' if shipment.insurance else '₹0.00' }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">Fragile Care Surcharge</span>
+                    <span>{{ '₹10.00' if shipment.fragile else '₹0.00' }}</span>
+                </div>
+            </div>
+            
+            <div class="bg-light p-3 rounded d-flex flex-column gap-2 border">
+                {% if shipment.weigh_at_pickup %}
+                <div class="d-flex justify-content-between border-bottom pb-2 small">
+                    <span class="text-muted">Payment Type</span>
+                    <span class="badge bg-warning text-dark fw-bold">Weigh at Pickup (Advance)</span>
+                </div>
+                {% else %}
+                <div class="d-flex justify-content-between border-bottom pb-2 small">
+                    <span class="text-muted">Total Calculated Cost</span>
+                    <span>₹{{ shipment.shipping_cost }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2 small">
+                    <span class="text-muted">Payment Mode</span>
+                    <span class="badge bg-primary text-white fw-bold">50% Prepaid Advance</span>
+                </div>
+                {% endif %}
+                <div class="d-flex justify-content-between small">
+                    <span class="text-muted">Subtotal (Net)</span>
+                    <span>₹{{ subtotal }}</span>
+                </div>
+                <div class="d-flex justify-content-between small">
+                    <span class="text-muted">GST Tax ({{ gst_rate | int }}%)</span>
+                    <span>₹{{ tax }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-top pt-2 fw-bold text-success fs-5">
+                    <span>Amount Due Today</span>
+                    <span>₹{{ payment.amount }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Select Payment Method (UPI QR / Card) -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm kpi-card p-4">
+            <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-wallet me-2"></i>Select Payment Method</h5>
+            
+            <div class="alert alert-primary d-flex align-items-center gap-2 py-2 px-3 mb-4" style="border-radius: 8px;">
+                <i class="fa-solid fa-bolt text-primary"></i>
+                <span class="small"><b>Online Advance Payment:</b> Advance fee of <b>₹{{ payment.amount }}</b> must be paid online to schedule driver pickup.</span>
+            </div>
+
+            <!-- Payment Method Selector Tabs -->
+            <div class="d-flex gap-2 mb-4">
+                <button type="button" class="payment-tab-btn active" id="tab-upi-btn" onclick="selectPaymentTab('upi')">
+                    <i class="fa-solid fa-qrcode text-success fa-lg"></i>
+                    <span>UPI / QR Code</span>
+                </button>
+                <button type="button" class="payment-tab-btn" id="tab-card-btn" onclick="selectPaymentTab('card')">
+                    <i class="fa-solid fa-credit-card text-primary fa-lg"></i>
+                    <span>Debit / Credit Card</span>
+                </button>
+            </div>
+
+            <!-- 1. UPI / QR SCAN PANEL -->
+            <div id="upi-payment-panel">
+                <form action="{{ url_for('payment.process_payment', shipment_id=shipment.id) }}" method="POST" id="upi-checkout-form">
+                    <input type="hidden" name="payment_method" value="UPI / QR Scan">
+
+                    <div class="qr-box-wrapper mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2 px-2">
+                            <span class="small fw-bold text-dark"><i class="fa-solid fa-building-columns text-primary me-1"></i>LogiTrack Official Merchant</span>
+                            <span class="badge bg-success-subtle text-success border border-success" style="font-size: 0.7rem;"><i class="fa-solid fa-shield-halved me-1"></i>Verified UPI</span>
+                        </div>
+
+                        <!-- Dynamic UPI QR Code -->
+                        <div class="p-3 bg-white border rounded d-inline-block shadow-sm mb-3">
+                            <img id="checkout-upi-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi%3A%2F%2Fpay%3Fpa%3Dlogitrack%40icici%26pn%3DLogiTrack%2520Logistics%26am%3D{{ payment.amount }}%26tr%3D{{ shipment.tracking_number }}%26cu%3DINR" alt="LogiTrack Merchant UPI QR" class="img-fluid" style="width: 170px; height: 170px;">
+                        </div>
+
+                        <div class="fw-bold text-dark fs-6 mb-1">Scan to Pay ₹{{ payment.amount }}</div>
+                        <div class="small font-monospace text-primary fw-bold mb-2">UPI ID: logitrack@icici</div>
+
+                        <!-- Supported UPI Apps -->
+                        <div class="d-flex flex-wrap justify-content-center gap-1 mb-2">
+                            <span class="upi-app-badge"><i class="fa-brands fa-google-pay text-primary"></i> GPay</span>
+                            <span class="upi-app-badge"><i class="fa-solid fa-mobile-screen-button text-purple" style="color: #6739b6;"></i> PhonePe</span>
+                            <span class="upi-app-badge"><i class="fa-solid fa-wallet text-info"></i> Paytm</span>
+                            <span class="upi-app-badge"><i class="fa-solid fa-building-columns text-success"></i> BHIM</span>
+                            <span class="upi-app-badge"><i class="fa-brands fa-amazon text-warning"></i> Amazon Pay</span>
+                        </div>
+                        <p class="text-muted small mb-0" style="font-size: 0.72rem;">Open any UPI payment app on your smartphone, scan this dynamic QR code and confirm the payment of ₹{{ payment.amount }}.</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted mb-1">UPI Transaction Reference / UTR # (Optional)</label>
+                        <input type="text" name="upi_ref" id="upi_ref" class="form-control form-control-sm" placeholder="e.g. 429182910291 (Auto-logged on scan)">
+                    </div>
+
+                    <div class="alert alert-success mt-2 small border-0 py-2 px-3" style="border-radius: 8px;">
+                        <i class="fa-solid fa-circle-check me-1 text-success"></i> <b>Instant Payment Verification:</b> Funds are credited directly to the LogiTrack Logistics ICICI merchant account.
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold text-white mt-2 shadow-sm" id="upi-confirm-btn">
+                        <i class="fa-solid fa-qrcode me-2"></i>Verify & Confirm ₹{{ payment.amount }} UPI Payment
+                    </button>
+                </form>
+            </div>
+
+            <!-- 2. CARD PAYMENT PANEL -->
+            <div id="card-payment-panel" style="display: none;">
+                <form action="{{ url_for('payment.process_payment', shipment_id=shipment.id) }}" method="POST" id="card-checkout-form">
+                    <input type="hidden" name="payment_method" value="Online Card">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Cardholder / Payer Name</label>
+                        <input type="text" name="card_name" id="card_name" class="form-control" placeholder="Enter name printed on card" value="{{ g.user.username if g.user else '' }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Card Number</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fa-solid fa-credit-card"></i></span>
+                            <input type="text" name="card_number" id="card_number" class="form-control" placeholder="4111 2222 3333 4444" maxlength="19" value="4111 2222 3333 4444" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Expiry Date</label>
+                            <input type="text" name="card_expiry" id="card_expiry" class="form-control" placeholder="MM/YY" maxlength="5" value="12/28" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">CVV Code</label>
+                            <input type="password" name="card_cvv" id="card_cvv" class="form-control" placeholder="***" maxlength="3" value="123" required>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-4 small border-0 py-2 px-3" style="border-radius: 8px;">
+                        <i class="fa-solid fa-shield-halved me-1 text-primary"></i> <b>Secure Sandbox Checkout:</b> This checkout is a simulation. You can use the pre-filled demo card or enter any 16-digit card.
+                    </div>
+
+                    <button type="submit" class="btn btn-warning w-100 py-2 fw-bold text-dark mt-3 shadow-sm" id="card-confirm-btn">
+                        <i class="fa-solid fa-lock me-2"></i>Pay ₹{{ payment.amount }} Advance with Card
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function selectPaymentTab(tab) {
+        const upiTabBtn = document.getElementById('tab-upi-btn');
+        const cardTabBtn = document.getElementById('tab-card-btn');
+        const upiPanel = document.getElementById('upi-payment-panel');
+        const cardPanel = document.getElementById('card-payment-panel');
+
+        if (tab === 'upi') {
+            upiTabBtn.classList.add('active');
+            cardTabBtn.classList.remove('active');
+            upiPanel.style.display = 'block';
+            cardPanel.style.display = 'none';
+        } else {
+            cardTabBtn.classList.add('active');
+            upiTabBtn.classList.remove('active');
+            cardPanel.style.display = 'block';
+            upiPanel.style.display = 'none';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Credit Card spacing formatter
+        const cardNumberInput = document.getElementById('card_number');
+        if (cardNumberInput) {
+            cardNumberInput.addEventListener('input', () => {
+                let val = cardNumberInput.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+                let formatted = [];
+                for (let i = 0; i < val.length; i += 4) {
+                    formatted.push(val.substring(i, i + 4));
+                }
+                cardNumberInput.value = formatted.join(' ');
+            });
+        }
+
+        // Expiry slash formatter (MM/YY)
+        const cardExpiryInput = document.getElementById('card_expiry');
+        if (cardExpiryInput) {
+            cardExpiryInput.addEventListener('input', () => {
+                let val = cardExpiryInput.value.replace(/\D/g, '');
+                if (val.length >= 2) {
+                    cardExpiryInput.value = val.substring(0, 2) + '/' + val.substring(2, 4);
+                } else {
+                    cardExpiryInput.value = val;
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Driver Run History - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-clock-rotate-left me-2"></i>Driver Run & Cargo History</h4>
+        <small class="text-muted">A comprehensive record of all individual shipments and container transfers handled by you.</small>
+    </div>
+    <a href="{{ url_for('driver.dashboard') }}" class="btn btn-outline-primary btn-sm fw-bold">
+        <i class="fa-solid fa-gauge-high me-1"></i>Back to Dashboard
+    </a>
+</div>
+
+<!-- Driver Performance KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm kpi-card p-3 border-start border-primary border-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 bg-primary-subtle text-primary rounded-3">
+                    <i class="fa-solid fa-box-open fa-2x"></i>
+                </div>
+                <div>
+                    <span class="text-muted small d-block">Shipments Carried</span>
+                    <h3 class="fw-bold mb-0 text-dark">{{ total_shipments_count }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm kpi-card p-3 border-start border-warning border-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 bg-warning-subtle text-warning rounded-3">
+                    <i class="fa-solid fa-truck-moving fa-2x"></i>
+                </div>
+                <div>
+                    <span class="text-muted small d-block">Container Runs</span>
+                    <h3 class="fw-bold mb-0 text-dark">{{ total_containers_count }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm kpi-card p-3 border-start border-info border-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 bg-info-subtle text-info rounded-3">
+                    <i class="fa-solid fa-weight-scale fa-2x"></i>
+                </div>
+                <div>
+                    <span class="text-muted small d-block">Total Weight Carried</span>
+                    <h3 class="fw-bold mb-0 text-dark">{{ total_weight_carried }} <small class="fs-6 text-muted">kg</small></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm kpi-card p-3 border-start border-success border-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 bg-success-subtle text-success rounded-3">
+                    <i class="fa-solid fa-hand-holding-dollar fa-2x"></i>
+                </div>
+                <div>
+                    <span class="text-muted small d-block">Cash Handled</span>
+                    <h3 class="fw-bold mb-0 text-success">₹{{ total_cash_handled }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 1. Individual Shipments & Deliveries History -->
+<div class="card border-0 shadow-sm kpi-card mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-primary">
+            <i class="fa-solid fa-boxes-stacked me-2"></i>Shipments Handled & Delivered ({{ shipments|length }})
+        </h5>
+        <span class="badge bg-primary-subtle text-primary border border-primary">Local & Pickup Cargo</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Tracking ID</th>
+                        <th>Origin</th>
+                        <th>Destination</th>
+                        <th>Receiver</th>
+                        <th>Cargo & Weight</th>
+                        <th>Payment / Cash Collected</th>
+                        <th>Status</th>
+                        <th class="pe-4 text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if shipments %}
+                        {% for sh in shipments %}
+                        <tr>
+                            <td class="ps-4">
+                                <a href="{{ url_for('driver.delivery_detail', id=sh.id) }}" class="fw-bold text-primary font-monospace text-decoration-none">
+                                    {{ sh.tracking_number }}
+                                </a>
+                            </td>
+                            <td>{{ sh.pickup_city }}</td>
+                            <td>{{ sh.receiver_city }}</td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-semibold text-dark">{{ sh.receiver_name }}</span>
+                                    <small class="text-muted" style="font-size: 0.72rem;">{{ sh.receiver_phone }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-semibold">{{ sh.package_category }}</span>
+                                <small class="text-muted d-block" style="font-size: 0.72rem;">{{ sh.package_weight }} kg</small>
+                            </td>
+                            <td>
+                                {% if sh.payment and sh.payment.collected_by_driver_id == driver.id and sh.payment.cash_collected_amount > 0 %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fa-solid fa-money-bill-wave me-1"></i>₹{{ sh.payment.cash_collected_amount }} (Cash)
+                                    </span>
+                                {% elif sh.payment and sh.payment.payment_status == 'Completed' %}
+                                    <span class="badge bg-success-subtle text-success border border-success">
+                                        <i class="fa-solid fa-check me-1"></i>₹{{ sh.shipping_cost }} (Settled)
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted small">₹{{ sh.shipping_cost }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if sh.status in ['Delivered', 'Completed'] %}
+                                    <span class="badge bg-success text-white py-1 px-2">
+                                        <i class="fa-solid fa-circle-check me-1"></i>Delivered
+                                    </span>
+                                {% elif sh.status == 'Warehouse' %}
+                                    <span class="badge bg-secondary text-white py-1 px-2">
+                                        <i class="fa-solid fa-warehouse me-1"></i>At Warehouse
+                                    </span>
+                                {% elif sh.status == 'Picked Up' %}
+                                    <span class="badge bg-info text-white py-1 px-2">
+                                        <i class="fa-solid fa-truck-pickup me-1"></i>Picked Up
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-primary text-white py-1 px-2">
+                                        {{ sh.status }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end">
+                                <a href="{{ url_for('driver.delivery_detail', id=sh.id) }}" class="btn btn-sm btn-outline-primary py-1 px-2 fw-semibold" style="font-size: 0.75rem;">
+                                    <i class="fa-solid fa-eye me-1"></i>View Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-folder-open fa-2x mb-3 text-secondary"></i>
+                                <p class="mb-0">No historical shipments recorded for your profile.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Container Transfer Runs History -->
+{% if container_transfers %}
+<div class="card border-0 shadow-sm kpi-card mb-4">
+    <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center" style="border-radius: 12px 12px 0 0;">
+        <h5 class="mb-0 fw-bold text-warning">
+            <i class="fa-solid fa-truck-moving me-2"></i>Linehaul Container Transfer Runs ({{ container_transfers|length }})
+        </h5>
+        <span class="badge bg-warning text-dark fw-bold">Inter-Branch Linehaul</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Container ID</th>
+                        <th>Origin Terminal</th>
+                        <th>Destination Terminal</th>
+                        <th>Orders Inside</th>
+                        <th>Total Cargo Weight</th>
+                        <th>Status</th>
+                        <th class="pe-4 text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in container_transfers %}
+                    <tr>
+                        <td class="ps-4">
+                            <span class="fw-bold font-monospace text-primary">{{ c.transfer_code }}</span>
+                        </td>
+                        <td>{{ c.from_branch.name if c.from_branch else 'Hub Origin' }}</td>
+                        <td>{{ c.to_branch.name if c.to_branch else 'Hub Destination' }}</td>
+                        <td>
+                            <span class="badge bg-secondary text-white">{{ c.total_orders }} Orders</span>
+                        </td>
+                        <td class="fw-semibold text-dark">{{ c.total_weight }} kg</td>
+                        <td>
+                            {% if c.status == 'Completed' %}
+                                <span class="badge bg-success text-white"><i class="fa-solid fa-circle-check me-1"></i>Completed</span>
+                            {% elif c.status == 'Arrived at Branch' %}
+                                <span class="badge bg-info text-white"><i class="fa-solid fa-warehouse me-1"></i>Arrived</span>
+                            {% elif c.status == 'In Transit' %}
+                                <span class="badge bg-primary text-white"><i class="fa-solid fa-truck-moving me-1"></i>In Transit</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">{{ c.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 text-end">
+                            <a href="{{ url_for('driver.container_detail', container_id=c.id) }}" class="btn btn-sm btn-outline-warning py-1 px-2 fw-semibold text-dark" style="font-size: 0.75rem;">
+                                <i class="fa-solid fa-up-right-from-square me-1"></i>View Container
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

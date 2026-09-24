@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} Branch - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-primary text-white py-3" style="border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-warehouse me-2 text-warning"></i>{{ action }} Branch Office</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold">Branch Office Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ branch.name if branch else '' }}" placeholder="e.g. Mumbai Main Hub" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Branch Code</label>
+                            <input type="text" name="code" class="form-control" value="{{ branch.code if branch else '' }}" placeholder="e.g. BOM01" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Street Address</label>
+                        <input type="text" name="address" class="form-control" value="{{ branch.address if branch else '' }}" placeholder="Enter street address" required>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold">City</label>
+                            <input type="text" name="city" class="form-control" value="{{ branch.city if branch else '' }}" placeholder="City" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">State</label>
+                            <input type="text" name="state" class="form-control" value="{{ branch.state if branch else '' }}" placeholder="State" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Zip Code</label>
+                            <input type="text" name="zip_code" class="form-control" value="{{ branch.zip_code if branch else '' }}" placeholder="Zip" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Branch Phone</label>
+                            <input type="text" name="phone" class="form-control" value="{{ branch.phone if branch else '' }}" placeholder="Phone" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Email Contact</label>
+                            <input type="email" name="email" class="form-control" value="{{ branch.email if branch else '' }}" placeholder="Email" required>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-circle-check me-2"></i>Save Office</button>
+                        <a href="{{ url_for('admin.list_branches') }}" class="btn btn-outline-secondary w-50">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

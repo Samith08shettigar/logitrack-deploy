@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-primary text-white py-3" style="border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-user-gear me-2 text-warning"></i>Account Profile Settings</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('auth.profile') }}">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Username</label>
+                        <input type="text" class="form-control" value="{{ current_user.username }}" disabled>
+                        <div class="form-text">Username cannot be changed.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Role Assignment</label>
+                        <input type="text" class="form-control" value="{{ current_user.role.name }}" disabled>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email Address</label>
+                        <input type="email" name="email" class="form-control" value="{{ current_user.email }}" required>
+                    </div>
+
+                    {% if customer %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Phone Number</label>
+                        <input type="text" name="phone" class="form-control" value="{{ customer.phone }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Loyalty Points Balance</label>
+                        <input type="text" class="form-control" value="{{ customer.loyalty_points }} pts" disabled>
+                    </div>
+                    {% elif driver %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Contact Phone</label>
+                        <input type="text" name="phone" class="form-control" value="{{ driver.phone }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">License Number</label>
+                        <input type="text" class="form-control" value="{{ driver.license_number }}" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Driver Performance Rating</label>
+                        <input type="text" class="form-control" value="{{ driver.rating }} / 5.0 Stars" disabled>
+                    </div>
+                    {% endif %}
+
+                    <hr class="my-4">
+                    <h6 class="fw-bold text-primary mb-3">Security & Password Update</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">New Password</label>
+                        <input type="password" name="new_password" class="form-control" placeholder="Leave blank to keep current password">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Confirm New Password</label>
+                        <input type="password" name="confirm_password" class="form-control" placeholder="Confirm your new password">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold"><i class="fa-solid fa-circle-check me-2"></i>Save Account Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

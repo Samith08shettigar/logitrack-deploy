@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Driver Panel - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-primary text-white border-0 shadow-sm p-4" style="border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%) !important;">
+            <h3 class="fw-bold mb-1"><i class="fa-solid fa-id-badge text-warning me-2"></i>Courier & Container Delivery Portal</h3>
+            <p class="mb-0 text-white-50">Linehaul container transfers, multi-order transport runs, and last-mile customer deliveries.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Grid -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fa-solid fa-truck-moving"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ container_runs|length }}</h3>
+                    <small class="text-muted small">Container Runs</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fa-solid fa-truck-loading"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ assigned_shipments|length }}</h3>
+                    <small class="text-muted small">Individual Runs</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-success bg-opacity-10 text-success">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ completed_today }}</h3>
+                    <small class="text-muted small">Completed Today</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-danger bg-opacity-10 text-danger">
+                    <i class="fa-solid fa-truck"></i>
+                </div>
+                <div>
+                    <h5 class="mb-0 fw-bold">{{ driver.vehicle.vehicle_number if driver.vehicle else 'No Vehicle' }}</h5>
+                    <small class="text-muted small">{{ driver.vehicle.vehicle_type if driver.vehicle else 'Unassigned' }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Physical Cash In-Hand & Handover Card -->
+{% if driver_cash_payments %}
+<div class="card border-0 shadow-sm kpi-card mb-4 border-warning border-start border-4">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-hand-holding-dollar fa-lg text-warning"></i>
+            <h5 class="mb-0 fw-bold text-dark">Physical Cash in Driver Custody</h5>
+        </div>
+        <div>
+            <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+                Total In-Hand: <b>₹{{ total_cash_in_hand }}</b>
+            </span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Shipment Tracking</th>
+                        <th>Sender / Pickup Point</th>
+                        <th>Cash Collected</th>
+                        <th>Collection Time</th>
+                        <th>Handover Status</th>
+                        <th class="pe-4 text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pay in driver_cash_payments %}
+                    <tr>
+                        <td class="ps-4">
+                            <a href="{{ url_for('driver.delivery_detail', id=pay.shipment_id) }}" class="fw-bold text-primary font-monospace text-decoration-none">
+                                {{ pay.shipment.tracking_number }}
+                            </a>
+                        </td>
+                        <td>{{ pay.shipment.sender_name }} ({{ pay.shipment.pickup_city }})</td>
+                        <td class="fw-bold text-success fs-6">₹{{ pay.cash_collected_amount }}</td>
+                        <td class="small text-muted">{{ pay.created_at.strftime('%d %b, %I:%M %p') }}</td>
+                        <td>
+                            {% if pay.cash_status == 'In Hand with Driver' %}
+                                <span class="badge bg-warning text-dark"><i class="fa-solid fa-triangle-exclamation me-1"></i>In Hand</span>
+                            {% elif pay.cash_status == 'Submitted to Manager' %}
+                                <span class="badge bg-info text-white"><i class="fa-solid fa-clock me-1"></i>Submitted — Awaiting Manager</span>
+                            {% elif pay.cash_status == 'Deposited with Manager' %}
+                                <span class="badge bg-success text-white"><i class="fa-solid fa-check-double me-1"></i>Deposited</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 text-end">
+                            {% if pay.cash_status == 'In Hand with Driver' %}
+                            <form method="POST" action="{{ url_for('driver.handover_cash', payment_id=pay.id) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-warning btn-sm fw-bold text-dark shadow-sm" onclick="return confirm('Submit ₹{{ pay.cash_collected_amount }} cash to Branch Manager?');">
+                                    <i class="fa-solid fa-arrow-up-from-bracket me-1"></i>Submit to Manager
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted small"><i class="fa-solid fa-check text-success me-1"></i>Submitted</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Active Multi-Shipment Container Runs -->
+{% if container_runs %}
+<div class="card border-0 shadow-sm kpi-card mb-4">
+    <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center" style="border-radius: 12px 12px 0 0;">
+        <h5 class="mb-0 fw-bold text-warning"><i class="fa-solid fa-truck-moving me-2"></i>Multi-Shipment Container Runs ({{ container_runs|length }})</h5>
+        <span class="badge bg-warning text-dark fw-bold">Linehaul Highway Transfer</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Container ID</th>
+                        <th>Route</th>
+                        <th>Total Orders</th>
+                        <th>Cargo Weight</th>
+                        <th>Status</th>
+                        <th class="pe-4 text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in container_runs %}
+                    <tr>
+                        <td class="ps-4">
+                            <strong class="text-primary font-monospace fs-6">{{ c.transfer_code }}</strong>
+                        </td>
+                        <td>
+                            <b>{{ c.from_branch.city }}</b> <i class="fa-solid fa-arrow-right text-muted mx-1"></i> <b>{{ c.to_branch.city }}</b>
+                        </td>
+                        <td><span class="badge bg-primary">{{ c.total_orders }} Orders</span></td>
+                        <td><b>{{ c.total_weight }} kg</b></td>
+                        <td>
+                            <span class="badge-status status-{{ c.status.lower().replace(' ', '-') }}">{{ c.status }}</span>
+                            {% if c.is_locked %}
+                            <span class="badge bg-danger text-white ms-1"><i class="fa-solid fa-lock me-1"></i>LOCKED</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 text-end">
+                            <a href="{{ url_for('driver.container_detail', container_id=c.id) }}" class="btn btn-warning btn-sm fw-bold text-dark shadow-sm">
+                                <i class="fa-solid fa-truck-fast me-1"></i>Manage Container
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Individual Run Checklist -->
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h5 class="mb-0 fw-bold text-primary"><i class="fa-solid fa-clipboard-list me-2"></i>Individual Deliveries & Local Runs</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Tracking ID</th>
+                        <th>Pickup Loc</th>
+                        <th>Delivery Destination</th>
+                        <th>Category / Weight</th>
+                        <th>Payment</th>
+                        <th>Status</th>
+                        <th class="pe-4 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if assigned_shipments %}
+                        {% for sh in assigned_shipments %}
+                        <tr>
+                            <td class="ps-4"><strong class="text-primary font-monospace">{{ sh.tracking_number }}</strong></td>
+                            <td>{{ sh.pickup_city }}</td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span>{{ sh.receiver_name }}</span>
+                                    <small class="text-muted" style="font-size: 0.75rem;"><i class="fa-solid fa-location-dot text-danger me-1"></i>{{ sh.receiver_city }}</small>
+                                </div>
+                            </td>
+                            <td><span class="small">{{ sh.package_category }} ({{ sh.package_weight }} kg)</span></td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    {{ sh.payment.payment_method if sh.payment else 'COD' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge-status status-{{ sh.status.lower().replace(' ', '-') }}">
+                                    {{ sh.status }}
+                                </span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                {% if sh.status == 'Driver Assigned' %}
+                                <a href="{{ url_for('driver.handle_assignment', id=sh.id, action='accept') }}" class="btn btn-success btn-sm fw-bold me-1"><i class="fa-solid fa-circle-check me-1"></i>Accept</a>
+                                <a href="{{ url_for('driver.handle_assignment', id=sh.id, action='reject') }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Reject this run assignment?')"><i class="fa-solid fa-circle-xmark me-1"></i>Reject</a>
+                                {% else %}
+                                <a href="{{ url_for('driver.delivery_detail', id=sh.id) }}" class="btn btn-primary btn-sm fw-bold"><i class="fa-solid fa-truck-ramp-box me-1"></i>Manage Delivery</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-road-circle-check fa-2x mb-3 text-muted"></i>
+                                <p class="mb-0">You have no active individual delivery runs assigned.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

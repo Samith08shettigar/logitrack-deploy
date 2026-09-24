@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block title %}Book a Shipment - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-primary text-white py-3" style="border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-calendar-plus me-2 text-warning"></i>Book Delivery Shipment</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" id="booking-form" enctype="multipart/form-data">
+                    
+                    <!-- Sender & Receiver Address Grid -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6 border-end">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-circle-user me-2"></i>Sender Details (Prefilled)</h6>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Sender Name</label>
+                                <input type="text" class="form-control" value="{{ current_user.username }}" disabled>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Sender Phone</label>
+                                <input type="text" class="form-control" value="{{ customer.phone }}" disabled>
+                            </div>
+                            
+                            <hr class="my-3">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-location-dot me-2"></i>Pickup Address</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Nearest Branch Office</label>
+                                <select name="branch_id" id="branch-select" class="form-select" required>
+                                    <option value="" disabled selected>-- Select Nearest Branch --</option>
+                                    {% for b in branches %}
+                                        <option value="{{ b.id }}">{{ b.name }} ({{ b.city }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Select Saved Address</label>
+                                <select name="pickup_address_id" id="pickup-select" class="form-select">
+                                    <option value="custom">-- Use Custom/New Address --</option>
+                                    {% for addr in saved_addresses if addr.is_pickup %}
+                                        <option value="{{ addr.id }}">{{ addr.label }} ({{ addr.city }}, {{ addr.state }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Custom address inputs, toggleable -->
+                            <div id="custom-pickup-container">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Street Address</label>
+                                    <input type="text" name="pickup_address" id="pickup_address" class="form-control" placeholder="123, Main Street" required>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-4">
+                                        <label class="form-label small fw-bold">City</label>
+                                        <input type="text" name="pickup_city" id="pickup_city" class="form-control" placeholder="City" required>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small fw-bold">State</label>
+                                        <input type="text" name="pickup_state" id="pickup_state" class="form-control" placeholder="State" required>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small fw-bold">Zip Code</label>
+                                        <input type="text" name="pickup_zip_code" id="pickup_zip_code" class="form-control" placeholder="Zip" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-truck-ramp-box me-2"></i>Receiver Details</h6>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Receiver Name</label>
+                                <input type="text" name="receiver_name" class="form-control" placeholder="Full name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Receiver Phone</label>
+                                <input type="text" name="receiver_phone" class="form-control" placeholder="Contact number" required>
+                            </div>
+                            
+                            <hr class="my-3">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-location-dot me-2"></i>Delivery Address</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Street Address</label>
+                                <input type="text" name="receiver_address" class="form-control" placeholder="123, Destination Street" required>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">City</label>
+                                    <input type="text" name="receiver_city" class="form-control" placeholder="City" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">State</label>
+                                    <input type="text" name="receiver_state" class="form-control" placeholder="State" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">Zip Code</label>
+                                    <input type="text" name="receiver_zip_code" class="form-control" placeholder="Zip" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cargo Details -->
+                    <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-cubes me-2"></i>Package Specifications</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Category</label>
+                            <select name="package_category" id="book-category" class="form-select">
+                                {% for cat_name, rate in get_packaging_categories() %}
+                                    <option value="{{ cat_name }}">{{ cat_name }}</option>
+                                {% endfor %}
+                                <option value="Other">Other</option>
+                            </select>
+                            <div id="custom-category-container" class="mt-2" style="display: none;">
+                                <input type="text" name="custom_category" id="custom-category" class="form-control form-control-sm" placeholder="Specify other type">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold mb-0">Weight (kg)</label>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" name="weigh_at_pickup" id="weigh-at-pickup">
+                                    <label class="form-check-label small fw-bold text-primary" for="weigh-at-pickup" style="font-size: 0.72rem;">Weigh at Pickup</label>
+                                </div>
+                            </div>
+                            <input type="number" name="package_weight" id="book-weight" class="form-control" value="1.0" min="0.1" step="0.1" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Product Image <span class="text-danger">*</span></label>
+                            <input type="file" name="package_image" id="package_image" class="form-control" accept="image/*" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Delivery Priority</label>
+                            <select name="delivery_type" id="book-type" class="form-select">
+                                <option value="Standard">Standard (3-5 days)</option>
+                                <option value="Express">Express (1-2 days)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Description / Contents</label>
+                            <textarea name="package_description" class="form-control" rows="2" placeholder="Describe contents..."></textarea>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center gap-4">
+                            <div class="form-check">
+                                <input type="checkbox" name="fragile" id="book-fragile" class="form-check-input">
+                                <label class="form-check-label small fw-bold">Fragile Handling</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" name="insurance" id="book-insurance" class="form-check-input">
+                                <label class="form-check-label small fw-bold">Insurance Cover</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Preferred Pickup Date</label>
+                            <input type="date" name="pickup_date" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-3 mb-4 bg-light p-3 rounded border" style="border-radius: 12px;">
+                        <div id="standard-pricing-display">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted small">Total Cost:</span>
+                                <span class="fw-bold text-secondary" id="total-shipping-cost">₹0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between border-top pt-2">
+                                <span class="text-muted small fw-bold">Prepaid 50% Advance (Pay Today):</span>
+                                <span class="fw-bold text-success fs-5" id="book-cost-result">₹0.00</span>
+                            </div>
+                            <small class="text-muted d-block mt-2 text-center" style="font-size: 0.72rem;"><i class="fa-solid fa-circle-info me-1 text-primary"></i>Remaining 50% balance will be paid as Cash on Delivery.</small>
+                        </div>
+                        <div id="weigh-pickup-pricing-display" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted small fw-bold">Flat Advance Fee (Pay Today):</span>
+                                <span class="fw-bold text-success fs-4">₹200.00</span>
+                            </div>
+                            <small class="text-muted d-block mt-2 text-start" style="font-size: 0.72rem;"><i class="fa-solid fa-circle-info me-1 text-primary"></i>Your package will be weighed at pickup. Total shipping rate is calculated then, deducting this ₹200.00 advance.</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-warning w-100 py-2 fw-bold text-dark"><i class="fa-solid fa-credit-card me-2"></i>Book & Pay</button>
+                        <a href="{{ url_for('customer.dashboard') }}" class="btn btn-outline-secondary w-50">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script id="saved-addresses-data" type="application/json">
+{
+  {% for addr in saved_addresses %}
+  "{{ addr.id }}": {
+      "address": {{ addr.address_line | tojson }},
+      "city": {{ addr.city | tojson }},
+      "state": {{ addr.state | tojson }},
+      "zip": {{ addr.zip_code | tojson }}
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+}
+</script>
+<script>
+    // Addresses selection switcher
+    const pickupSelect = document.getElementById('pickup-select');
+    const customContainer = document.getElementById('custom-pickup-container');
+    const pickupFields = ['pickup_address', 'pickup_city', 'pickup_state', 'pickup_zip_code'];
+    
+    // Address values mappings
+    const savedAddressData = JSON.parse(document.getElementById('saved-addresses-data').textContent || '{}');
+    
+    pickupSelect.addEventListener('change', () => {
+        if (pickupSelect.value === 'custom') {
+            customContainer.style.display = 'block';
+            pickupFields.forEach(f => {
+                const el = document.getElementById(f);
+                el.value = '';
+                el.required = true;
+            });
+        } else {
+            customContainer.style.display = 'none';
+            const data = savedAddressData[pickupSelect.value];
+            document.getElementById('pickup_address').value = data.address;
+            document.getElementById('pickup_city').value = data.city;
+            document.getElementById('pickup_state').value = data.state;
+            document.getElementById('pickup_zip_code').value = data.zip;
+            
+            pickupFields.forEach(f => {
+                document.getElementById(f).required = false;
+            });
+        }
+    });
+    
+    // Live Cost Calculator sync
+    const bookWeight = document.getElementById('book-weight');
+    const bookType = document.getElementById('book-type');
+    const bookFragile = document.getElementById('book-fragile');
+    const bookInsurance = document.getElementById('book-insurance');
+    const bookCostResult = document.getElementById('book-cost-result');
+    const bookCategory = document.getElementById('book-category');
+    const customCategory = document.getElementById('custom-category');
+    const weighAtPickup = document.getElementById('weigh-at-pickup');
+    const stdPricing = document.getElementById('standard-pricing-display');
+    const weighPricing = document.getElementById('weigh-pickup-pricing-display');
+    const totalShippingCost = document.getElementById('total-shipping-cost');
+    
+    function calculateBookingCost() {
+        if (weighAtPickup.checked) {
+            bookWeight.disabled = true;
+            bookWeight.required = false;
+            stdPricing.style.display = 'none';
+            weighPricing.style.display = 'block';
+            return;
+        }
+        
+        bookWeight.disabled = false;
+        bookWeight.required = true;
+        stdPricing.style.display = 'block';
+        weighPricing.style.display = 'none';
+        
+        const weight = parseFloat(bookWeight.value) || 0.1;
+        const delivery_type = bookType.value;
+        const fragile = bookFragile.checked;
+        const insurance = bookInsurance.checked;
+        const category = bookCategory.value === 'Other' ? customCategory.value : bookCategory.value;
+        const declared_val = 0.0;
+        
+        fetch('/shipment/calculate-cost', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                weight: weight,
+                delivery_type: delivery_type,
+                fragile: fragile,
+                insurance: insurance,
+                package_category: category,
+                declared_value: declared_val
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                totalShippingCost.innerText = `₹${data.cost.toFixed(2)}`;
+                bookCostResult.innerText = `₹${(data.cost / 2).toFixed(2)}`;
+            }
+        })
+        .catch(err => console.error("Error fetching price", err));
+    }
+    
+    bookCategory.addEventListener('change', () => {
+        const container = document.getElementById('custom-category-container');
+        if (bookCategory.value === 'Other') {
+            container.style.display = 'block';
+            customCategory.required = true;
+        } else {
+            container.style.display = 'none';
+            customCategory.required = false;
+            customCategory.value = '';
+        }
+        calculateBookingCost();
+    });
+    customCategory.addEventListener('input', calculateBookingCost);
+    weighAtPickup.addEventListener('change', calculateBookingCost);
+    bookInsurance.addEventListener('change', calculateBookingCost);
+    
+    [bookWeight, bookType, bookFragile, bookInsurance].forEach(el => {
+        el.addEventListener('input', calculateBookingCost);
+        el.addEventListener('change', calculateBookingCost);
+    });
+    
+    calculateBookingCost();
+</script>
+{% endblock %}

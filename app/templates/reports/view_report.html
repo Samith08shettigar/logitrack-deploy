@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-file-invoice me-2"></i>{{ title }}</h4>
+        <small class="text-muted">Live report table query. Timeframe: <b>{{ timeframe|capitalize }}</b></small>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('reports.export_report_file', type=report_type, timeframe=timeframe, format='pdf') }}" class="btn btn-outline-danger btn-sm fw-bold"><i class="fa-solid fa-file-pdf me-1"></i>PDF</a>
+        <a href="{{ url_for('reports.export_report_file', type=report_type, timeframe=timeframe, format='excel') }}" class="btn btn-outline-success btn-sm fw-bold"><i class="fa-solid fa-file-excel me-1"></i>Excel</a>
+        <a href="{{ url_for('reports.export_report_file', type=report_type, timeframe=timeframe, format='csv') }}" class="btn btn-outline-secondary btn-sm fw-bold"><i class="fa-solid fa-file-csv me-1"></i>CSV</a>
+        <a href="{{ url_for('reports.index') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-circle-arrow-left me-1"></i>Back</a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        {% for header in headers %}
+                            <th class="{% if loop.first %}ps-4{% endif %}">{{ header }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if data %}
+                        {% for row in data %}
+                        <tr>
+                            {% for cell in row %}
+                                <td class="{% if loop.first %}ps-4{% endif %}">{{ cell }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="{{ headers|length }}" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-database fa-2x mb-3 text-muted"></i>
+                                <p class="mb-0">No matching logs found in this query date filter.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

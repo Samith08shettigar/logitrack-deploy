@@ -1,0 +1,1342 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Run - LogiTrack{% endblock %}
+
+{% block extra_css %}
+<style>
+    .map-icon {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.05rem;
+        border: 3px solid white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: transform 0.2s ease-in-out;
+        z-index: 10;
+        position: relative;
+    }
+    .leaflet-popup-content-wrapper {
+        background: #ffffff !important;
+        color: #1e293b !important;
+        border-radius: 12px !important;
+        border: none !important;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06) !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-size: 0.75rem !important;
+        padding: 4px 10px !important;
+        font-weight: 600 !important;
+    }
+    .leaflet-popup-tip {
+        background: #ffffff !important;
+        box-shadow: none !important;
+    }
+    .radar-container {
+        position: relative;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .radar-ripple {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        pointer-events: none;
+        animation: radar-sweep 2.8s infinite cubic-bezier(0.215, 0.610, 0.355, 1);
+        z-index: -1;
+    }
+    @keyframes radar-sweep {
+        0% {
+            transform: scale(0.6);
+            opacity: 0.95;
+        }
+        100% {
+            transform: scale(2.8);
+            opacity: 0;
+        }
+    }
+    .route-flow-overlay {
+        stroke-dasharray: 8, 12;
+        animation: flow-dash 1s linear infinite;
+    }
+    @keyframes flow-dash {
+        to {
+            stroke-dashoffset: -20;
+        }
+    }
+    .custom-div-icon {
+        background: transparent !important;
+        border: none !important;
+    }
+    .map-container {
+        border: 2px solid #3b82f6 !important;
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.25) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left Column: Map and details -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm kpi-card p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-primary mb-0"><i class="fa-solid fa-circle-info me-2"></i>Run #{{ shipment.tracking_number }}</h5>
+                <span class="badge bg-warning text-dark">{{ shipment.delivery_type }}</span>
+            </div>
+            
+            <div class="row g-3 small mb-4">
+                <div class="col-6">
+                    <strong class="text-secondary d-block">Sender Pickup Point</strong>
+                    <span>{{ shipment.sender_name }}</span><br/>
+                    <span>{{ shipment.sender_phone }}</span><br/>
+                    <span class="text-muted">{{ shipment.pickup_address_line }}, {{ shipment.pickup_city }}</span>
+                </div>
+                
+                <div class="col-6">
+                    <strong class="text-secondary d-block">Receiver Dropoff Point</strong>
+                    <span>{{ shipment.receiver_name }}</span><br/>
+                    <span>{{ shipment.receiver_phone }}</span><br/>
+                    <span class="text-muted">{{ shipment.receiver_address_line }}, {{ shipment.receiver_city }}</span>
+                </div>
+            </div>
+
+            <hr class="my-3">
+            <div class="row g-3 small mb-4">
+                <div class="col-6">
+                    <strong class="text-secondary d-block">Cargo Category & Weight</strong>
+                    <span class="fw-bold">{{ shipment.package_category }}</span><br/>
+                    <span class="text-muted">{{ shipment.package_weight }} kg</span>
+                </div>
+                <div class="col-6">
+                    <strong class="text-secondary d-block">Product Image</strong>
+                    {% if shipment.package_image_path %}
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#imagePreviewModal" onclick="document.getElementById('modalPreviewImg').src='{{ url_for('static', filename=shipment.package_image_path) }}'; return false;" title="Tap to expand">
+                            <img src="{{ url_for('static', filename=shipment.package_image_path) }}" alt="Product Image" class="img-thumbnail mt-1" style="max-height: 80px; object-fit: cover; cursor: pointer;">
+                        </a>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.65rem;"><i class="fa-solid fa-magnifying-glass-plus me-1"></i>Tap to zoom</small>
+                    {% else %}
+                        <span class="text-muted"><i class="fa-solid fa-triangle-exclamation me-1 text-warning"></i>No Product Image</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Financial Breakdown / Pickup Collection Info -->
+            <div class="card bg-light border p-3 mb-4" style="border-radius: 10px;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small fw-bold text-dark"><i class="fa-solid fa-receipt me-1 text-primary"></i>Billing Summary</span>
+                    {% if shipment.payment and shipment.payment.payment_status == 'Completed' and shipment.status not in ['Booked', 'Confirmed', 'Branch Assigned', 'Driver Assigned'] %}
+                    <span class="badge bg-success text-white"><i class="fa-solid fa-check-circle me-1"></i>Fully Settled</span>
+                    {% elif shipment.advance_paid > 0 %}
+                    <span class="badge bg-warning text-dark"><i class="fa-solid fa-clock me-1"></i>Advance Paid (Pickup Pending)</span>
+                    {% else %}
+                    <span class="badge bg-secondary text-white"><i class="fa-solid fa-clock me-1"></i>Balance Pending</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span>Total Calculated Rate:</span>
+                    <span class="fw-bold text-dark">₹{{ shipment.shipping_cost }}</span>
+                </div>
+                <div class="d-flex justify-content-between small text-success mb-1">
+                    <span>Advance Paid (Online):</span>
+                    <span class="fw-bold">- ₹{{ advance_paid }}</span>
+                </div>
+                {% if shipment.payment and shipment.payment.payment_status == 'Completed' and shipment.status not in ['Booked', 'Confirmed', 'Branch Assigned', 'Driver Assigned'] %}
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span>Balance Paid at Pickup:</span>
+                    <span class="fw-bold text-success">₹{{ balance_due }}</span>
+                </div>
+                <div class="d-flex justify-content-between small border-top pt-1 fw-bold text-success">
+                    <span>Net Balance Due:</span>
+                    <span class="fs-6 text-success">₹0.00 <span class="badge bg-success text-white ms-1" style="font-size: 0.65rem;">Paid ✓</span></span>
+                </div>
+                {% else %}
+                <div class="d-flex justify-content-between small border-top pt-1 fw-bold text-primary">
+                    <span>Balance to Collect at Pickup:</span>
+                    <span class="fs-6 text-danger">{% if shipment.weigh_at_pickup and shipment.status in ['Booked', 'Confirmed', 'Branch Assigned', 'Driver Assigned'] %}Pending Weighing{% else %}₹{{ balance_due }}{% endif %}</span>
+                </div>
+                <small class="text-muted d-block mt-1" style="font-size: 0.7rem;"><i class="fa-solid fa-circle-info text-primary me-1"></i>Online advance paid. Weigh package and collect remaining balance upon pickup.</small>
+                {% endif %}
+
+                <!-- DRIVER CASH HANDOVER STATUS & SUBMIT ACTION -->
+                {% if shipment.payment %}
+                    {% if shipment.payment.cash_status == 'In Hand with Driver' %}
+                    <div class="mt-3 pt-2 border-top">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small fw-bold text-dark"><i class="fa-solid fa-hand-holding-dollar text-warning me-1"></i>Cash In-Hand:</span>
+                            <span class="badge bg-warning text-dark"><i class="fa-solid fa-triangle-exclamation me-1"></i>Pending Handover</span>
+                        </div>
+                        <p class="small text-muted mb-2" style="font-size: 0.72rem;">You are currently holding <b>₹{{ shipment.payment.cash_collected_amount }}</b> cash from sender. Submit to the Branch Manager upon returning to the warehouse.</p>
+                        <form method="POST" action="{{ url_for('driver.handover_cash', payment_id=shipment.payment.id) }}">
+                            <button type="submit" class="btn btn-warning btn-sm fw-bold w-100 shadow-sm" onclick="return confirm('Confirm submitting ₹{{ shipment.payment.cash_collected_amount }} physical cash to the Branch Manager?');">
+                                <i class="fa-solid fa-arrow-up-from-bracket me-1"></i>Submit Cash (₹{{ shipment.payment.cash_collected_amount }}) to Manager
+                            </button>
+                        </form>
+                    </div>
+                    {% elif shipment.payment.cash_status == 'Submitted to Manager' %}
+                    <div class="mt-3 pt-2 border-top">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="small fw-bold text-dark"><i class="fa-solid fa-hand-holding-dollar text-primary me-1"></i>Cash Handover:</span>
+                            <span class="badge bg-info text-white"><i class="fa-solid fa-clock me-1"></i>Submitted to Manager</span>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Cash handover of ₹{{ shipment.payment.cash_collected_amount }} is pending manager acknowledgement.</small>
+                    </div>
+                    {% elif shipment.payment.cash_status == 'Deposited with Manager' %}
+                    <div class="mt-3 pt-2 border-top">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="small fw-bold text-dark"><i class="fa-solid fa-building-columns text-success me-1"></i>Cash Status:</span>
+                            <span class="badge bg-success text-white"><i class="fa-solid fa-check-double me-1"></i>Deposited with Manager</span>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">₹{{ shipment.payment.cash_collected_amount }} received and acknowledged by Branch Manager.</small>
+                    </div>
+                    {% elif shipment.payment.digital_reference %}
+                    <div class="mt-3 pt-2 border-top">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="small fw-bold text-dark"><i class="fa-solid fa-building-columns text-primary me-1"></i>Software Direct:</span>
+                            <span class="badge bg-primary text-white"><i class="fa-solid fa-qrcode me-1"></i>{{ shipment.payment.digital_reference }}</span>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Digital settlement direct to LogiTrack account.</small>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- Delivery Payment Alert for Last-Mile Driver -->
+            {% if is_last_mile_leg or shipment.status in ['Out For Delivery', 'Delivered'] %}
+                {% if shipment.payment and shipment.payment.payment_status == 'Completed' %}
+                <div class="alert alert-success mb-4 d-flex align-items-center gap-3 py-2 px-3 border-0 shadow-sm" style="border-radius: 8px;">
+                    <i class="fa-solid fa-circle-check fa-2x text-success"></i>
+                    <div>
+                        <strong class="d-block text-success small">PREPAID / FULLY SETTLED</strong>
+                        <span class="small text-muted">Shipping cost (₹{{ shipment.shipping_cost }}) has been fully paid. <b>Do NOT collect any money from the receiver.</b></span>
+                    </div>
+                </div>
+                {% elif shipment.payment and shipment.payment.payment_status != 'Completed' %}
+                <div class="alert alert-danger mb-4 d-flex align-items-center gap-3 py-2 px-3 border-0 shadow-sm" style="border-radius: 8px;">
+                    <i class="fa-solid fa-hand-holding-dollar fa-2x text-danger"></i>
+                    <div>
+                        <strong class="d-block text-danger small">CASH ON DELIVERY PENDING</strong>
+                        <span class="small">You MUST collect <b>₹{{ balance_due }} INR</b> cash from the receiver before handing over the parcel.</span>
+                    </div>
+                </div>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Embedded Route Map -->
+        <div class="card border-0 shadow-sm p-3 mb-4 kpi-card">
+            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-map-location-dot me-2"></i>Route Map</h6>
+            <div id="driver-map" style="height: 250px; border-radius: 8px; z-index: 1;"></div>
+        </div>
+    </div>
+    
+    <!-- Right Column: Status updates and signature -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm p-4 kpi-card">
+            <h5 class="fw-bold mb-3 text-primary d-flex align-items-center gap-2">
+                <i class="fa-solid fa-clipboard-check"></i>
+                Update Dispatch Progress
+            </h5>
+            
+            <form method="POST" id="status-update-form" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Set Current Status</label>
+                    <select name="status" id="status-select" class="form-select border-primary" onchange="toggleProofPanel()">
+                        {% if 'Picked Up' in allowed_statuses %}
+                        <option value="Picked Up" {% if shipment.status == 'Picked Up' %}selected{% endif %}>Picked Up (Collected & Weighed from Sender)</option>
+                        {% endif %}
+                        {% if 'Warehouse' in allowed_statuses %}
+                        <option value="Warehouse" {% if shipment.status == 'Warehouse' %}selected{% endif %}>
+                            {% if is_container_leg %}
+                            Warehouse (Arrived at {{ shipment.next_branch.city if shipment.next_branch else (shipment.receiver_city if shipment.receiver_city else '') }} Warehouse)
+                            {% else %}
+                            Warehouse (Arrived at {{ shipment.pickup_city }} Warehouse)
+                            {% endif %}
+                        </option>
+                        {% endif %}
+                        {% if 'In Transit' in allowed_statuses %}
+                        <option value="In Transit" {% if shipment.status == 'In Transit' %}selected{% endif %}>In Transit (Leaving {{ shipment.pickup_city }} Warehouse)</option>
+                        {% endif %}
+                        {% if 'Out For Delivery' in allowed_statuses %}
+                        <option value="Out For Delivery" {% if shipment.status == 'Out For Delivery' %}selected{% endif %}>Out For Delivery (Courier out for dropoff)</option>
+                        {% endif %}
+                        {% if 'Delivered' in allowed_statuses %}
+                        <option value="Delivered" {% if shipment.status == 'Delivered' %}selected{% endif %}>Delivered (Mark run complete)</option>
+                        {% endif %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Current Scan Location</label>
+                    <input type="text" name="location" id="location-input" class="form-control" value="{{ shipment.branch.city if shipment.branch else shipment.pickup_city }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Notes / Checkpoint comments</label>
+                    <input type="text" name="notes" class="form-control" placeholder="Describe package status or courier updates">
+                </div>
+
+                <!-- PICKUP BILLING PANEL -->
+                {% if not is_container_leg and not is_last_mile_leg %}
+                <div id="pickup-billing-container" style="display: none;" class="card border border-primary border-opacity-50 p-3 mb-3 bg-light" style="border-radius: 12px;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-weight-scale me-1"></i>Pickup Weight & Balance Calculation</h6>
+                        <span class="badge bg-primary text-white">Weigh at Pickup</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark"><i class="fa-solid fa-scale-balanced me-1 text-primary"></i>Actual Package Weight (kg)</label>
+                        <input type="number" name="actual_weight" id="actual-weight" class="form-control fw-bold fs-5 text-primary border-primary" value="{{ shipment.package_weight if shipment.package_weight > 0 else 1.0 }}" placeholder="Enter weight in kg" min="0.1" step="0.1" required>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Enter verified package weight. Rate is automatically recalculated and deducted from the online advance.</small>
+                    </div>
+
+                    <!-- Live Calculation Breakdown Box -->
+                    <div class="bg-white border rounded p-3 mb-3 shadow-sm">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Calculated Total Rate:</span>
+                            <span class="fw-bold text-dark" id="live-calc-total">₹{{ shipment.shipping_cost }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-success mb-1">
+                            <span><i class="fa-solid fa-circle-check me-1"></i>Prepaid Advance (Online):</span>
+                            <span class="fw-bold" id="live-calc-advance">- ₹{{ advance_paid }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-top pt-2 fw-bold text-dark">
+                            <span>Net Balance to Collect from Sender:</span>
+                            <span class="text-danger fs-5" id="live-calc-balance">₹{{ balance_due }}</span>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-2">
+                        <label class="form-label small fw-bold text-dark mb-2"><i class="fa-solid fa-hand-holding-dollar me-1 text-success"></i>Payment Collection Confirmation</label>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" name="balance_collected" id="balance_collected" checked>
+                            <label class="form-check-label small fw-bold text-success" for="balance_collected" id="balance-collected-label">
+                                <i class="fa-solid fa-check-circle me-1"></i>Balance Amount Received from Sender
+                            </label>
+                        </div>
+                        
+                        <!-- Interactive Payment Mode Selection Buttons -->
+                        <div class="mb-3" id="pickup-method-row">
+                            <label class="small fw-bold text-dark mb-1 d-block" style="font-size: 0.75rem;">Select Payment Mode:</label>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-primary flex-fill fw-bold" id="btn-mode-cash" onclick="switchPickupPaymentMode('Cash')">
+                                    <i class="fa-solid fa-money-bill-wave me-1"></i>Cash
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success flex-fill fw-bold" id="btn-mode-upi" onclick="switchPickupPaymentMode('UPI / QR Scan')">
+                                    <i class="fa-solid fa-qrcode me-1"></i>UPI / QR Scan
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info flex-fill fw-bold" id="btn-mode-card" onclick="switchPickupPaymentMode('Online Card')">
+                                    <i class="fa-solid fa-credit-card me-1"></i>Card / POS
+                                </button>
+                            </div>
+                            <select name="pickup_payment_method" id="pickup_payment_method" class="form-select form-select-sm fw-bold text-primary d-none" onchange="handlePickupPaymentModeChange()">
+                                <option value="Cash" selected>Cash (Collect in Hand)</option>
+                                <option value="UPI / QR Scan">UPI / QR Scan (Software Direct)</option>
+                                <option value="Online Card">Card POS / Gateway</option>
+                            </select>
+                        </div>
+
+                        <!-- Hidden field to submit digital reference / auth code -->
+                        <input type="hidden" name="digital_ref" id="final_digital_ref" value="">
+
+                        <!-- 1. Cash Handover Notice Box -->
+                        <div id="cash-mode-box" class="alert alert-warning py-3 px-3 small mb-3 border-0 shadow-sm" style="border-radius: 10px;">
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="fa-solid fa-hand-holding-dollar fa-2x text-warning mt-1"></i>
+                                <div>
+                                    <strong class="d-block text-dark fs-6 mb-1">Cash (Collect in Hand)</strong>
+                                    <p class="text-muted mb-1" style="font-size: 0.78rem;">
+                                        Collect physical cash of <b class="text-dark" id="cash-mode-amount">₹{{ balance_due }}</b> from sender upon pickup.
+                                    </p>
+                                    <div class="badge bg-warning text-dark border border-warning" style="font-size: 0.7rem;">
+                                        <i class="fa-solid fa-shield-halved me-1"></i>Custody Notice: Cash must be deposited with Branch Manager at warehouse
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Software Direct UPI Dummy QR Code Box -->
+                        <div id="upi-mode-box" class="card border-success border-opacity-50 p-3 mb-3 bg-white shadow-sm" style="display: none; border-radius: 12px;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small fw-bold text-success"><i class="fa-solid fa-qrcode me-1"></i>LogiTrack Official Merchant QR</span>
+                                <span class="badge bg-success-subtle text-success border border-success" style="font-size: 0.68rem;"><i class="fa-solid fa-circle-check me-1"></i>Verified UPI Direct</span>
+                            </div>
+                            
+                            <div class="text-center py-2 bg-light rounded-3 p-3 mb-2 border">
+                                <!-- Dynamic UPI QR Preview -->
+                                <div class="p-2 bg-white border rounded-3 d-inline-block shadow-sm mb-2 position-relative">
+                                    <img id="dynamic-upi-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi%3A%2F%2Fpay%3Fpa%3Dlogitrack%40icici%26pn%3DLogiTrack%2520Logistics%26cu%3DINR" alt="LogiTrack UPI QR" class="img-fluid" style="width: 150px; height: 150px; display: block;" onerror="renderFallbackCanvasQr();">
+                                    <canvas id="fallback-qr-canvas" width="150" height="150" style="display: none; width: 150px; height: 150px;"></canvas>
+                                </div>
+                                
+                                <div class="fw-bold text-dark fs-6 mb-1">Scan to Pay <span class="text-success fw-bold" id="upi-qr-amount">₹{{ balance_due }}</span></div>
+                                <div class="font-monospace text-primary small fw-bold mb-2">
+                                    UPI ID: <span id="upi-id-text">logitrack@icici</span>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 ms-1" style="font-size: 0.7rem;" onclick="copyUpiId()" title="Copy UPI ID"><i class="fa-solid fa-copy"></i></button>
+                                </div>
+                                
+                                <!-- Supported UPI Apps -->
+                                <div class="d-flex flex-wrap justify-content-center gap-1 mb-2">
+                                    <span class="badge bg-white text-dark border"><i class="fa-brands fa-google-pay text-primary me-1"></i>GPay</span>
+                                    <span class="badge bg-white text-dark border"><i class="fa-solid fa-mobile-screen text-purple me-1" style="color: #6739b6;"></i>PhonePe</span>
+                                    <span class="badge bg-white text-dark border"><i class="fa-solid fa-wallet text-info me-1"></i>Paytm</span>
+                                    <span class="badge bg-white text-dark border"><i class="fa-solid fa-building-columns text-success me-1"></i>BHIM</span>
+                                    <span class="badge bg-white text-dark border"><i class="fa-brands fa-amazon text-warning me-1"></i>Amazon Pay</span>
+                                </div>
+                                <small class="text-muted d-block" style="font-size: 0.72rem;">Customer scans this QR with any UPI app to transfer balance directly to LogiTrack merchant account.</small>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label small fw-bold text-muted mb-0" style="font-size: 0.75rem;">UPI Ref / UTR Transaction #</label>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-bold" style="font-size: 0.72rem;" onclick="simulateUpiPayment()">
+                                        <i class="fa-solid fa-wand-magic-sparkles me-1 text-primary"></i>Simulate Instant Scan & Pay
+                                    </button>
+                                </div>
+                                <input type="text" id="upi_ref_input" class="form-control form-control-sm font-monospace" placeholder="e.g. 429381028391" oninput="syncDigitalRef(this.value)">
+                            </div>
+                            <div id="upi-verified-alert" class="alert alert-success py-1 px-2 small mb-0 d-none" style="border-radius: 6px; font-size: 0.72rem;">
+                                <i class="fa-solid fa-circle-check me-1"></i><b>UPI Payment Confirmed:</b> Transaction logged directly to LogiTrack account.
+                            </div>
+                        </div>
+
+                        <!-- 3. Card POS / Gateway Option Box -->
+                        <div id="card-mode-box" class="card border-primary border-opacity-50 p-3 mb-3 bg-white shadow-sm" style="display: none; border-radius: 12px;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small fw-bold text-primary"><i class="fa-solid fa-credit-card me-1"></i>Card POS & Terminal Payment</span>
+                                <span class="badge bg-primary-subtle text-primary border border-primary" style="font-size: 0.68rem;"><i class="fa-solid fa-bolt me-1"></i>POS Gateway Direct</span>
+                            </div>
+
+                            <!-- Simulated Card UI Container -->
+                            <div class="p-3 mb-3 text-white rounded-3 shadow-sm position-relative overflow-hidden" style="background: linear-gradient(135deg, #1e293b, #334155); border: 1px solid #475569;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small fw-bold text-warning font-monospace" style="letter-spacing: 1px;"><i class="fa-solid fa-microchip fa-lg text-warning me-1"></i> EMV CHIP</span>
+                                    <span class="badge bg-dark text-white border border-secondary px-2"><i class="fa-solid fa-wifi me-1"></i>Contactless / POS</span>
+                                </div>
+                                <div class="mb-2">
+                                    <div class="font-monospace fs-6 fw-bold tracking-widest text-light" id="card-preview-num">4532 •••• •••• 8920</div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-end small text-muted">
+                                    <div>
+                                        <span class="d-block" style="font-size: 0.65rem; color: #94a3b8;">CARDHOLDER</span>
+                                        <span class="fw-bold text-white text-uppercase" id="card-preview-name">{{ shipment.sender_name }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="d-block" style="font-size: 0.65rem; color: #94a3b8;">EXPIRES</span>
+                                        <span class="fw-bold text-white font-monospace" id="card-preview-exp">12/28</span>
+                                    </div>
+                                    <div>
+                                        <i class="fa-brands fa-cc-visa fa-2x text-white"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.75rem;">Card Number</label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text"><i class="fa-solid fa-credit-card"></i></span>
+                                        <input type="text" id="card_num_input" class="form-control font-monospace" placeholder="4532 8901 2345 6789" maxlength="19" value="4532 8901 2345 6789" oninput="updateCardPreview()">
+                                    </div>
+                                </div>
+                                <div class="col-7">
+                                    <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.75rem;">Cardholder Name</label>
+                                    <input type="text" id="card_name_input" class="form-control form-control-sm" value="{{ shipment.sender_name }}" placeholder="Cardholder Name" oninput="updateCardPreview()">
+                                </div>
+                                <div class="col-3">
+                                    <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.75rem;">Expiry</label>
+                                    <input type="text" id="card_exp_input" class="form-control form-control-sm font-monospace" placeholder="MM/YY" maxlength="5" value="12/28" oninput="updateCardPreview()">
+                                </div>
+                                <div class="col-2">
+                                    <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.75rem;">CVV</label>
+                                    <input type="password" id="card_cvv_input" class="form-control form-control-sm font-monospace" placeholder="•••" maxlength="3" value="892">
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label small fw-bold text-muted mb-0" style="font-size: 0.75rem;">POS Terminal Auth / Reference #</label>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-bold" style="font-size: 0.72rem;" onclick="simulateCardPosPayment()">
+                                        <i class="fa-solid fa-calculator me-1 text-primary"></i>Simulate POS Card Swipe / Tap
+                                    </button>
+                                </div>
+                                <input type="text" id="card_ref_input" class="form-control form-control-sm font-monospace" placeholder="e.g. POS-AUTH-99210" oninput="syncDigitalRef(this.value)">
+                            </div>
+
+                            <div id="card-verified-alert" class="alert alert-success py-1 px-2 small mb-0 d-none" style="border-radius: 6px; font-size: 0.72rem;">
+                                <i class="fa-solid fa-circle-check me-1"></i><b>Card Payment Approved:</b> Terminal authorization received and funds credited.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- POD Proof of Delivery Panel (Gated strictly for Last-Mile Courier on Delivered status) -->
+                {% if is_last_mile_leg or 'Delivered' in allowed_statuses %}
+                <div id="proof-details-container" style="display: none;" class="border-top pt-3 mt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-clipboard-check me-1"></i>Proof of Delivery (POD)</h6>
+                        <span class="badge bg-danger text-white" id="pod-req-badge">Required</span>
+                    </div>
+
+                    <!-- Step 1: Product Delivery Photo -->
+                    <div class="card border border-2 border-dashed p-3 mb-3" style="border-radius: 12px; background: #f8fafc;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label small fw-bold mb-0"><i class="fa-solid fa-camera text-primary me-1"></i>Step 1 — Product Image</label>
+                            <span class="badge bg-secondary" id="photo-status-badge">Pending</span>
+                        </div>
+                        <p class="small text-muted mb-2">Take a photo of the delivered package at the customer doorway/handover.</p>
+                        
+                        <div id="photo-upload-zone">
+                            <input type="file" name="proof_image" id="proof-image-input" class="d-none" accept="image/*" capture="environment">
+                            <button type="button" class="btn btn-outline-primary btn-sm fw-bold w-100 py-2" id="trigger-photo-btn">
+                                <i class="fa-solid fa-camera me-1"></i>Take / Upload Product Image
+                            </button>
+                        </div>
+
+                        <div id="photo-preview-zone" style="display: none;" class="text-center mt-2">
+                            <div class="position-relative d-inline-block">
+                                <img id="photo-preview-img" src="" alt="Proof Preview" class="img-thumbnail shadow-sm" style="max-height: 140px; object-fit: cover; border-radius: 8px;">
+                                <span class="badge bg-success position-absolute top-0 start-100 translate-middle shadow-sm">
+                                    <i class="fa-solid fa-check"></i>
+                                </span>
+                            </div>
+                            <div class="mt-2 d-flex justify-content-center gap-2 align-items-center">
+                                <span class="badge bg-success text-white py-1 px-2"><i class="fa-solid fa-circle-check me-1"></i>Product Image Captured ✓</span>
+                                <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2" id="retake-photo-btn" style="font-size: 0.75rem;">
+                                    <i class="fa-solid fa-rotate-left me-1"></i>Retake Image
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Receiver Signature -->
+                    <div class="card border border-2 border-dashed p-3 mb-3" style="border-radius: 12px; background: #f8fafc;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label small fw-bold mb-0" id="sig-step-label"><i class="fa-solid fa-signature text-primary me-1"></i>Step 2 — Receiver E-Signature</label>
+                            <span class="badge bg-secondary" id="sig-status-badge">Pending</span>
+                        </div>
+                        <p class="small text-muted mb-2">Ask the receiver/customer to sign on the signature canvas below.</p>
+                        
+                        <div class="border bg-white rounded p-1 mb-2">
+                            <canvas id="sig-canvas" width="450" height="130" class="w-100" style="touch-action: none; background: #ffffff; cursor: crosshair;"></canvas>
+                        </div>
+                        <input type="hidden" name="signature_data" id="sig-data-input">
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="sig-clear-btn">
+                                <i class="fa-solid fa-eraser me-1"></i>Clear Signature
+                            </button>
+                            <button type="button" class="btn btn-outline-success btn-sm fw-bold" id="sig-confirm-btn">
+                                <i class="fa-solid fa-check me-1"></i>Confirm Signature
+                            </button>
+                        </div>
+                        <div id="sig-confirmed-badge" class="mt-2 text-center" style="display: none;">
+                            <span class="badge bg-success text-white py-1 px-2"><i class="fa-solid fa-signature me-1"></i>Receiver Signature Captured ✓</span>
+                        </div>
+                    </div>
+
+                    <!-- POD Gated Status Alert -->
+                    <div class="alert alert-info py-2 px-3 small d-flex align-items-center gap-2 mb-0" id="pod-gate-alert" style="border-radius: 8px;">
+                        <i class="fa-solid fa-info-circle text-info"></i>
+                        <span id="pod-gate-text">Both <b>Product Image</b> and <b>Receiver Signature</b> must be captured before completing delivery.</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- STANDALONE SENDER SIGNATURE CONTAINER (Shown on Picked Up only) -->
+                {% if not is_container_leg %}
+                <div id="pickup-signature-container" style="display: none;" class="border-top pt-3 mt-3">
+                    <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-file-signature me-1"></i>Sender Pickup Signature</h6>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold d-block">Sender Signature (Confirm Pickup)</label>
+                        <div class="border bg-white rounded p-1 mb-2">
+                            <canvas id="pickup-sig-canvas" width="450" height="130" class="w-100" style="touch-action: none; cursor: crosshair;"></canvas>
+                        </div>
+                        <input type="hidden" name="pickup_signature_data" id="pickup-sig-data-input">
+                        <div class="text-end">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="pickup-sig-clear-btn"><i class="fa-solid fa-eraser me-1"></i>Clear Pad</button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold mt-4" id="submit-btn"><i class="fa-solid fa-circle-check me-2"></i>Save Status Update</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- MAP SETUP ---
+        // Comprehensive city coordinates lookup
+        const cityCoordinates = {
+            "mumbai": [19.0760, 72.8777],
+            "bombay": [19.0760, 72.8777],
+            "delhi": [28.7041, 77.1025],
+            "new delhi": [28.6139, 77.2090],
+            "bangalore": [12.9716, 77.5946],
+            "bengaluru": [12.9716, 77.5946],
+            "mangalore": [12.9141, 74.8560],
+            "mangaluru": [12.9141, 74.8560],
+            "pune": [18.5204, 73.8567],
+            "chennai": [13.0827, 80.2707],
+            "madras": [13.0827, 80.2707],
+            "kolkata": [22.5726, 88.3639],
+            "calcutta": [22.5726, 88.3639],
+            "hyderabad": [17.3850, 78.4867],
+            "ahmedabad": [23.0225, 72.5714],
+            "jaipur": [26.9124, 75.7873],
+            "surat": [21.1702, 72.8311],
+            "lucknow": [26.8467, 80.9462],
+            "nagpur": [21.1458, 79.0882],
+            "indore": [22.7196, 75.8577],
+            "patna": [25.5941, 85.1376],
+            "bhopal": [23.2599, 77.4126],
+            "vadodara": [22.3072, 73.1812],
+            "baroda": [22.3072, 73.1812],
+            "mysore": [12.2958, 76.6394],
+            "mysuru": [12.2958, 76.6394],
+            "udupi": [13.3409, 74.7421],
+            "manipal": [13.3524, 74.7876],
+            "kochi": [9.9312, 76.2673],
+            "cochin": [9.9312, 76.2673],
+            "goa": [15.2993, 74.1240],
+            "panaji": [15.4909, 73.8278],
+            "hubli": [15.3647, 75.1240],
+            "dharwad": [15.4589, 75.0078],
+            "belgaum": [15.8497, 74.4977],
+            "belagavi": [15.8497, 74.4977],
+            "coimbatore": [11.0168, 76.9558],
+            "madurai": [9.9252, 78.1198],
+            "visakhapatnam": [17.6868, 83.2185],
+            "chandigarh": [30.7333, 76.7794],
+            "gurgaon": [28.4595, 77.0266],
+            "gurugram": [28.4595, 77.0266],
+            "noida": [28.5355, 77.3910],
+            "ghaziabad": [28.6692, 77.4538],
+            "thiruvananthapuram": [8.5241, 76.9366],
+            "trivandrum": [8.5241, 76.9366],
+            "calicut": [11.2588, 75.7804],
+            "kozhikode": [11.2588, 75.7804],
+            "shimoga": [13.9299, 75.5681],
+            "shivamogga": [13.9299, 75.5681],
+            "tumkur": [13.3379, 77.1006],
+            "tumakuru": [13.3379, 77.1006],
+            "hassan": [13.0033, 76.1004],
+            "davangere": [14.4644, 75.9218],
+            "bellary": [15.1394, 76.9214],
+            "ballari": [15.1394, 76.9214],
+            "gulbarga": [17.3297, 76.8343],
+            "kalaburagi": [17.3297, 76.8343]
+        };
+
+        function resolveCoords(name, defaultCoords) {
+            if (!name) return defaultCoords;
+            const clean = name.toLowerCase().trim();
+            for (const [key, coords] of Object.entries(cityCoordinates)) {
+                if (clean === key || clean.startsWith(key) || clean.includes(key)) {
+                    return coords;
+                }
+            }
+            return defaultCoords;
+        }
+
+        const originName = "{{ shipment.pickup_city }}";
+        const destName = "{{ shipment.receiver_city }}";
+
+        const originCoords = resolveCoords(originName, [12.9716, 77.5946]); // Default Bangalore
+        const destCoords = resolveCoords(destName, [12.9141, 74.8560]);    // Default Mangalore
+
+        const shipmentStatus = "{{ shipment.status.lower().strip() }}";
+        const statusProgressMap = {
+            'booked': 0.15,
+            'payment pending': 0.15,
+            'confirmed': 0.30,
+            'branch assigned': 0.45,
+            'picked up': 0.60,
+            'warehouse': 0.70,
+            'in transit': 0.85,
+            'out for delivery': 0.95,
+            'delivered': 1.0
+        };
+        const progress = statusProgressMap[shipmentStatus] || 0.15;
+
+        // Calculate truck's current position interpolated along the route
+        const currentCoords = [
+            originCoords[0] + (destCoords[0] - originCoords[0]) * progress,
+            originCoords[1] + (destCoords[1] - originCoords[1]) * progress
+        ];
+
+        const isDelivered = (progress >= 1.0);
+
+        // Initialize Map centered between origin and destination
+        const map = L.map('driver-map', { 
+            zoomControl: false,
+            scrollWheelZoom: true 
+        }).setView(originCoords, 7);
+        
+        // Add zoom control at bottom-right
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Standard OpenStreetMap / Carto basemap for reliable, crystal-clear road rendering
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Custom High-tech FontAwesome Marker Icons
+        const pickupIcon = L.divIcon({
+            html: '<div class="map-icon bg-primary text-white shadow"><i class="fa-solid fa-house-chimney"></i></div>',
+            className: 'custom-div-icon',
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
+        });
+
+        const deliveryIcon = L.divIcon({
+            html: '<div class="map-icon bg-success text-white shadow"><i class="fa-solid fa-location-dot"></i></div>',
+            className: 'custom-div-icon',
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
+        });
+
+        // Creative truck marker style matching mockup
+        const rippleColor = isDelivered ? 'rgba(34, 197, 94, 0.4)' : 'rgba(139, 92, 246, 0.4)';
+        const currentIcon = L.divIcon({
+            html: `
+                <div class="radar-container">
+                    <div class="radar-ripple" style="background: ${rippleColor}; animation-delay: 0s;"></div>
+                    <div class="radar-ripple" style="background: ${rippleColor}; animation-delay: 1.4s;"></div>
+                    <div class="map-icon text-white shadow" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; border: 3px solid #ffffff !important; box-shadow: 0 0 15px rgba(139, 92, 246, 0.6) !important;">
+                        <i class="fa-solid fa-truck-moving"></i>
+                    </div>
+                </div>
+            `,
+            className: 'custom-div-icon',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        });
+
+        // Add markers with styled popups
+        L.marker(originCoords, { icon: pickupIcon }).addTo(map)
+            .bindPopup("<b>Pickup: {{ shipment.pickup_city | capitalize }}</b><br/><small class='text-muted'>Origin Hub</small>");
+            
+        const destMarker = L.marker(destCoords, { icon: deliveryIcon }).addTo(map)
+            .bindPopup("<b>Delivery: {{ shipment.receiver_city | capitalize }}</b><br/><small class='text-muted'>Destination Hub</small>");
+
+        let truckPopupText = "<b>Status: {{ shipment.status }}</b>";
+        if (!isDelivered) {
+            L.marker(currentCoords, { icon: currentIcon }).addTo(map)
+                .bindPopup(truckPopupText, { autoClose: false, closeOnClick: false })
+                .openPopup();
+        } else {
+            destMarker.openPopup();
+        }
+
+        // 1. Completed path
+        L.polyline([originCoords, currentCoords], {
+            color: '#3b82f6',
+            weight: 6,
+            opacity: 0.9,
+            lineJoin: 'round'
+        }).addTo(map);
+
+        // completed path flowing dots overlay
+        L.polyline([originCoords, currentCoords], {
+            color: '#ffffff',
+            weight: 2,
+            opacity: 0.8,
+            lineJoin: 'round',
+            className: 'route-flow-overlay'
+        }).addTo(map);
+
+        // 2. Remaining path
+        L.polyline([currentCoords, destCoords], {
+            color: '#64748b',
+            weight: 4,
+            opacity: 0.6,
+            dashArray: '5, 10',
+            lineJoin: 'round'
+        }).addTo(map);
+
+        // Fit bounds
+        const bounds = L.latLngBounds([originCoords, destCoords]);
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 12 });
+
+        setTimeout(() => {
+            map.invalidateSize();
+            map.fitBounds(bounds, { padding: [60, 60], maxZoom: 12 });
+        }, 300);
+
+        // --- DYNAMIC FORM PANEL TOGGLING & POD GATING ---
+        const statusSelect = document.getElementById('status-select');
+        const locationInput = document.getElementById('location-input');
+        const proofDetailsContainer = document.getElementById('proof-details-container');
+        const pickupSigContainer = document.getElementById('pickup-signature-container');
+        const pickupBillingContainer = document.getElementById('pickup-billing-container');
+        const actualWeightInput = document.getElementById('actual-weight');
+        const submitBtn = document.getElementById('submit-btn');
+
+        // Pricing Configuration for Live Pickup Recalculation
+        const packagingRate = {{ packaging_rate }};
+        const deliveryType = "{{ shipment.delivery_type }}";
+        const isFragile = {{ 'true' if shipment.fragile else 'false' }};
+        const isInsurance = {{ 'true' if shipment.insurance else 'false' }};
+        const insuranceFee = {{ insurance_fee }};
+        const advancePaid = {{ advance_paid }};
+
+        function recalculatePickupCost() {
+            if (!actualWeightInput) return;
+            let weight = parseFloat(actualWeightInput.value);
+            if (isNaN(weight) || weight <= 0) {
+                weight = 0;
+            }
+            let cost = 20.0;
+            cost += weight * 5.5;
+            cost += weight * packagingRate;
+            if (deliveryType === 'Express') {
+                cost *= 1.5;
+            }
+            if (isFragile) {
+                cost += 10.0;
+            }
+            if (isInsurance) {
+                cost += insuranceFee;
+            }
+            cost = Math.round(cost * 100) / 100;
+            let adv = advancePaid;
+            let bal = Math.max(0, Math.round((cost - adv) * 100) / 100);
+
+            const liveTotal = document.getElementById('live-calc-total');
+            const liveAdv = document.getElementById('live-calc-advance');
+            const liveBal = document.getElementById('live-calc-balance');
+            const balLabel = document.getElementById('balance-collected-label');
+            const cashModeAmount = document.getElementById('cash-mode-amount');
+            const upiQrAmount = document.getElementById('upi-qr-amount');
+
+            if (liveTotal) liveTotal.textContent = '₹' + cost.toFixed(2);
+            if (liveAdv) liveAdv.textContent = '- ₹' + adv.toFixed(2);
+            if (liveBal) liveBal.textContent = '₹' + bal.toFixed(2);
+            if (cashModeAmount) cashModeAmount.textContent = '₹' + bal.toFixed(2);
+            if (upiQrAmount) upiQrAmount.textContent = '₹' + bal.toFixed(2);
+            if (balLabel) {
+                if (bal === 0) {
+                    balLabel.innerHTML = '<i class="fa-solid fa-check-circle me-1"></i>Fully Covered by Online Advance (₹0.00 Due)';
+                } else {
+                    balLabel.innerHTML = `<i class="fa-solid fa-check-circle me-1"></i>Balance Received from Sender (₹${bal.toFixed(2)})`;
+                }
+            }
+            updateDynamicUpiQr();
+        }
+
+        function updateDynamicUpiQr() {
+            const qrImg = document.getElementById('dynamic-upi-qr');
+            const liveBalElem = document.getElementById('live-calc-balance');
+            const upiQrAmount = document.getElementById('upi-qr-amount');
+            const cashModeAmount = document.getElementById('cash-mode-amount');
+
+            let balStr = liveBalElem ? liveBalElem.textContent.replace(/[^\d.]/g, '') : '{{ balance_due }}';
+            let balVal = parseFloat(balStr) || 0;
+
+            if (upiQrAmount) upiQrAmount.textContent = '₹' + balVal.toFixed(2);
+            if (cashModeAmount) cashModeAmount.textContent = '₹' + balVal.toFixed(2);
+
+            let upiUri = `upi://pay?pa=logitrack@icici&pn=LogiTrack%20Logistics&am=${balVal.toFixed(2)}&tr={{ shipment.tracking_number }}&cu=INR`;
+            let qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(upiUri)}`;
+            
+            if (qrImg) {
+                qrImg.src = qrUrl;
+            }
+            renderFallbackCanvasQr(balVal);
+        }
+
+        function renderFallbackCanvasQr(amount) {
+            const canvas = document.getElementById('fallback-qr-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+            
+            // Draw neat dummy QR pattern
+            ctx.fillStyle = '#0f172a';
+            function drawFinder(x, y) {
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(x, y, 36, 36);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(x + 5, y + 5, 26, 26);
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(x + 10, y + 10, 16, 16);
+            }
+            drawFinder(6, 6);
+            drawFinder(108, 6);
+            drawFinder(6, 108);
+
+            for (let i = 0; i < 11; i++) {
+                for (let j = 0; j < 11; j++) {
+                    if ((i < 4 && j < 4) || (i > 6 && j < 4) || (i < 4 && j > 6)) continue;
+                    let seed = (i * 9 + j * 17 + Math.floor((amount || 100) * 7));
+                    if (seed % 2 === 0) {
+                        ctx.fillRect(10 + i * 11, 10 + j * 11, 8, 8);
+                    }
+                }
+            }
+        }
+
+        function switchPickupPaymentMode(mode) {
+            const select = document.getElementById('pickup_payment_method');
+            if (select) {
+                select.value = mode;
+            }
+            handlePickupPaymentModeChange();
+        }
+
+        function handlePickupPaymentModeChange() {
+            const methodSelect = document.getElementById('pickup_payment_method');
+            if (!methodSelect) return;
+            const mode = methodSelect.value;
+            const cashBox = document.getElementById('cash-mode-box');
+            const upiBox = document.getElementById('upi-mode-box');
+            const cardBox = document.getElementById('card-mode-box');
+
+            const btnCash = document.getElementById('btn-mode-cash');
+            const btnUpi = document.getElementById('btn-mode-upi');
+            const btnCard = document.getElementById('btn-mode-card');
+
+            if (btnCash) btnCash.className = 'btn btn-sm ' + (mode === 'Cash' ? 'btn-primary' : 'btn-outline-primary') + ' flex-fill fw-bold';
+            if (btnUpi) btnUpi.className = 'btn btn-sm ' + (mode === 'UPI / QR Scan' ? 'btn-success' : 'btn-outline-success') + ' flex-fill fw-bold';
+            if (btnCard) btnCard.className = 'btn btn-sm ' + (mode === 'Online Card' ? 'btn-info text-white' : 'btn-outline-info') + ' flex-fill fw-bold';
+
+            if (cashBox) cashBox.style.display = (mode === 'Cash') ? 'block' : 'none';
+            if (upiBox) {
+                upiBox.style.display = (mode === 'UPI / QR Scan') ? 'block' : 'none';
+                if (mode === 'UPI / QR Scan') {
+                    updateDynamicUpiQr();
+                }
+            }
+            if (cardBox) cardBox.style.display = (mode === 'Online Card') ? 'block' : 'none';
+
+            // Sync digital ref
+            if (mode === 'UPI / QR Scan') {
+                const upiInput = document.getElementById('upi_ref_input');
+                syncDigitalRef(upiInput ? upiInput.value : '');
+            } else if (mode === 'Online Card') {
+                const cardInput = document.getElementById('card_ref_input');
+                syncDigitalRef(cardInput ? cardInput.value : '');
+            } else {
+                syncDigitalRef('');
+            }
+        }
+
+        function syncDigitalRef(val) {
+            const finalInput = document.getElementById('final_digital_ref');
+            if (finalInput) finalInput.value = val || '';
+        }
+
+        function simulateUpiPayment() {
+            const input = document.getElementById('upi_ref_input');
+            const alertElem = document.getElementById('upi-verified-alert');
+            const randomUtr = 'UPI-' + Math.floor(100000000000 + Math.random() * 900000000000);
+            if (input) {
+                input.value = randomUtr;
+                syncDigitalRef(randomUtr);
+            }
+            if (alertElem) {
+                alertElem.classList.remove('d-none');
+            }
+        }
+
+        function simulateCardPosPayment() {
+            const input = document.getElementById('card_ref_input');
+            const alertElem = document.getElementById('card-verified-alert');
+            const authCode = 'POS-AUTH-' + Math.floor(10000 + Math.random() * 90000);
+            if (input) {
+                input.value = authCode;
+                syncDigitalRef(authCode);
+            }
+            if (alertElem) {
+                alertElem.classList.remove('d-none');
+            }
+        }
+
+        function updateCardPreview() {
+            const numInput = document.getElementById('card_num_input');
+            const nameInput = document.getElementById('card_name_input');
+            const expInput = document.getElementById('card_exp_input');
+            
+            const prevNum = document.getElementById('card-preview-num');
+            const prevName = document.getElementById('card-preview-name');
+            const prevExp = document.getElementById('card-preview-exp');
+
+            if (numInput && prevNum) {
+                let val = numInput.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+                let formatted = '';
+                for (let i = 0; i < val.length; i++) {
+                    if (i > 0 && i % 4 === 0) formatted += ' ';
+                    formatted += val[i];
+                }
+                numInput.value = formatted;
+                prevNum.textContent = formatted || '4532 •••• •••• 8920';
+            }
+            if (nameInput && prevName) {
+                prevName.textContent = nameInput.value.toUpperCase() || '{{ shipment.sender_name }}';
+            }
+            if (expInput && prevExp) {
+                prevExp.textContent = expInput.value || '12/28';
+            }
+        }
+
+        function copyUpiId() {
+            const text = document.getElementById('upi-id-text').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert("UPI ID copied to clipboard: " + text);
+            }).catch(() => {
+                prompt("Copy UPI ID:", text);
+            });
+        }
+
+        // Expose to window for inline HTML onclick/onchange handlers
+        window.switchPickupPaymentMode = switchPickupPaymentMode;
+        window.handlePickupPaymentModeChange = handlePickupPaymentModeChange;
+        window.updateDynamicUpiQr = updateDynamicUpiQr;
+        window.renderFallbackCanvasQr = renderFallbackCanvasQr;
+        window.simulateUpiPayment = simulateUpiPayment;
+        window.simulateCardPosPayment = simulateCardPosPayment;
+        window.updateCardPreview = updateCardPreview;
+        window.copyUpiId = copyUpiId;
+        window.syncDigitalRef = syncDigitalRef;
+
+        if (actualWeightInput) {
+            actualWeightInput.addEventListener('input', recalculatePickupCost);
+        }
+
+        // POD Elements
+        const proofImgInput = document.getElementById('proof-image-input');
+        const triggerPhotoBtn = document.getElementById('trigger-photo-btn');
+        const retakePhotoBtn = document.getElementById('retake-photo-btn');
+        const photoUploadZone = document.getElementById('photo-upload-zone');
+        const photoPreviewZone = document.getElementById('photo-preview-zone');
+        const photoPreviewImg = document.getElementById('photo-preview-img');
+        const photoStatusBadge = document.getElementById('photo-status-badge');
+
+        const sigCanvas = document.getElementById('sig-canvas');
+        const sigClearBtn = document.getElementById('sig-clear-btn');
+        const sigConfirmBtn = document.getElementById('sig-confirm-btn');
+        const sigDataInput = document.getElementById('sig-data-input');
+        const sigStatusBadge = document.getElementById('sig-status-badge');
+        const sigConfirmedBadge = document.getElementById('sig-confirmed-badge');
+
+        const podGateAlert = document.getElementById('pod-gate-alert');
+        const podGateText = document.getElementById('pod-gate-text');
+
+        let photoCaptured = {{ 'true' if shipment.proof_image_path else 'false' }};
+        let signatureCaptured = {{ 'true' if shipment.delivery_signature_path or shipment.signature_path else 'false' }};
+
+        if (photoCaptured && photoPreviewZone) {
+            photoUploadZone.style.display = 'none';
+            photoPreviewZone.style.display = 'block';
+            photoPreviewImg.src = "{{ url_for('static', filename=shipment.proof_image_path) if shipment.proof_image_path else '' }}";
+            photoStatusBadge.className = 'badge bg-success';
+            photoStatusBadge.innerHTML = 'Captured ✓';
+        }
+
+        function checkDeliveryReadiness() {
+            if (statusSelect.value !== 'Delivered') {
+                submitBtn.disabled = false;
+                return;
+            }
+
+            if (photoCaptured && signatureCaptured) {
+                submitBtn.disabled = false;
+                submitBtn.className = 'btn btn-success w-100 py-3 fw-bold mt-4 shadow-sm';
+                submitBtn.innerHTML = '<i class="fa-solid fa-truck-ramp-box me-2"></i>Mark Delivered (Confirm All Proof)';
+                if (podGateAlert) {
+                    podGateAlert.className = 'alert alert-success py-2 px-3 small d-flex align-items-center gap-2 mb-0';
+                    podGateText.innerHTML = '<b class="text-success"><i class="fa-solid fa-circle-check me-1"></i>All Proof of Delivery requirements satisfied! Ready to mark delivered.</b>';
+                }
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.className = 'btn btn-secondary w-100 py-3 fw-bold mt-4 opacity-75';
+                submitBtn.innerHTML = '<i class="fa-solid fa-lock me-2"></i>Mark Delivered (Proof Required)';
+                if (podGateAlert) {
+                    podGateAlert.className = 'alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-0';
+                    let missing = [];
+                    if (!photoCaptured) missing.push('Product Image');
+                    if (!signatureCaptured) missing.push('Receiver Signature');
+                    podGateText.innerHTML = '<span><i class="fa-solid fa-triangle-exclamation text-warning me-1"></i>Pending: <b>' + missing.join(' & ') + '</b> required to enable delivery confirmation.</span>';
+                }
+            }
+        }
+
+        // Photo Upload Trigger
+        if (triggerPhotoBtn && proofImgInput) {
+            triggerPhotoBtn.addEventListener('click', () => proofImgInput.click());
+            proofImgInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        photoPreviewImg.src = evt.target.result;
+                        photoUploadZone.style.display = 'none';
+                        photoPreviewZone.style.display = 'block';
+                        photoStatusBadge.className = 'badge bg-success';
+                        photoStatusBadge.innerHTML = 'Captured ✓';
+                        photoCaptured = true;
+                        checkDeliveryReadiness();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Retake Photo
+        if (retakePhotoBtn && proofImgInput) {
+            retakePhotoBtn.addEventListener('click', () => {
+                proofImgInput.value = '';
+                photoPreviewImg.src = '';
+                photoPreviewZone.style.display = 'none';
+                photoUploadZone.style.display = 'block';
+                photoStatusBadge.className = 'badge bg-secondary';
+                photoStatusBadge.innerHTML = 'Pending';
+                photoCaptured = false;
+                checkDeliveryReadiness();
+            });
+        }
+
+        function toggleProofPanel() {
+            const val = statusSelect.value;
+            
+            // Reset visibility
+            if (proofDetailsContainer) proofDetailsContainer.style.display = 'none';
+            if (pickupSigContainer) pickupSigContainer.style.display = 'none';
+            if (pickupBillingContainer) {
+                pickupBillingContainer.style.display = 'none';
+                if (actualWeightInput) actualWeightInput.required = false;
+            }
+            submitBtn.className = 'btn btn-primary w-100 py-2 fw-bold mt-4';
+            submitBtn.innerHTML = '<i class="fa-solid fa-circle-check me-2"></i>Save Status Update';
+            submitBtn.disabled = false;
+
+            if (locationInput) {
+                if (val === 'Warehouse') {
+                    {% if is_container_leg %}
+                    locationInput.value = "{{ shipment.next_branch.city if shipment.next_branch else (shipment.receiver_city if shipment.receiver_city else '') }}";
+                    {% else %}
+                    locationInput.value = "{{ shipment.branch.city if shipment.branch else (shipment.pickup_city if shipment.pickup_city else '') }}";
+                    {% endif %}
+                } else if (val === 'Picked Up') {
+                    locationInput.value = "{{ shipment.pickup_city if shipment.pickup_city else '' }}";
+                } else if (val === 'Received Shipment') {
+                    locationInput.value = "{{ shipment.branch.city if shipment.branch else (shipment.pickup_city if shipment.pickup_city else '') }}";
+                } else if (val === 'In Transit') {
+                    locationInput.value = "{{ shipment.branch.city if shipment.branch else (shipment.pickup_city if shipment.pickup_city else '') }}";
+                } else if (val === 'Arrived at Branch') {
+                    locationInput.value = "{{ shipment.next_branch.city if shipment.next_branch else (shipment.receiver_city if shipment.receiver_city else '') }}";
+                } else if (val === 'Out For Delivery' || val === 'Delivered' || val === 'Failed Delivery') {
+                    locationInput.value = "{{ shipment.receiver_city if shipment.receiver_city else '' }}";
+                }
+            }
+
+            if (val === 'Picked Up') {
+                if (pickupSigContainer) pickupSigContainer.style.display = 'block';
+                if (pickupBillingContainer) {
+                    pickupBillingContainer.style.display = 'block';
+                    if (actualWeightInput) actualWeightInput.required = true;
+                    recalculatePickupCost();
+                }
+                submitBtn.className = 'btn btn-info text-white w-100 py-2 fw-bold mt-4';
+                submitBtn.innerHTML = '<i class="fa-solid fa-truck-pickup me-2"></i>Mark Picked Up & Collect Balance';
+            } else if (val === 'Received Shipment') {
+                submitBtn.className = 'btn btn-warning text-dark w-100 py-2 fw-bold mt-4';
+                submitBtn.innerHTML = '<i class="fa-solid fa-boxes-packing me-2"></i>Received Shipment';
+            } else if (val === 'In Transit') {
+                submitBtn.className = 'btn btn-info text-white w-100 py-2 fw-bold mt-4';
+                submitBtn.innerHTML = '<i class="fa-solid fa-truck-moving me-2"></i>Start Transfer';
+            } else if (val === 'Arrived at Branch') {
+                submitBtn.className = 'btn btn-success w-100 py-2 fw-bold mt-4';
+                submitBtn.innerHTML = '<i class="fa-solid fa-warehouse me-2"></i>Arrived at Branch';
+            } else if (val === 'Delivered') {
+                if (proofDetailsContainer) proofDetailsContainer.style.display = 'block';
+                checkDeliveryReadiness();
+            }
+        }
+
+        window.toggleProofPanel = toggleProofPanel;
+        statusSelect.addEventListener('change', toggleProofPanel);
+        toggleProofPanel();
+
+        // --- RECEIVER SIGNATURE CANVAS PAD DRAW LOGIC ---
+        if (sigCanvas) {
+            const ctx = sigCanvas.getContext('2d');
+            let isDrawing = false;
+            let lastX = 0, lastY = 0;
+            let hasDrawn = false;
+
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.lineWidth = 3;
+
+            function draw(e) {
+                if (!isDrawing) return;
+                const rect = sigCanvas.getBoundingClientRect();
+                const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+                const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                lastX = x;
+                lastY = y;
+                hasDrawn = true;
+            }
+
+            function startDrawing(e) {
+                isDrawing = true;
+                const rect = sigCanvas.getBoundingClientRect();
+                lastX = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+                lastY = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+            }
+
+            sigCanvas.addEventListener('mousedown', startDrawing);
+            sigCanvas.addEventListener('mousemove', draw);
+            sigCanvas.addEventListener('mouseup', () => isDrawing = false);
+            sigCanvas.addEventListener('mouseout', () => isDrawing = false);
+
+            sigCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e); });
+            sigCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+            sigCanvas.addEventListener('touchend', () => isDrawing = false);
+
+            if (sigClearBtn) {
+                sigClearBtn.addEventListener('click', () => {
+                    ctx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+                    sigDataInput.value = '';
+                    hasDrawn = false;
+                    signatureCaptured = false;
+                    sigStatusBadge.className = 'badge bg-secondary';
+                    sigStatusBadge.innerHTML = 'Pending';
+                    if (sigConfirmedBadge) sigConfirmedBadge.style.display = 'none';
+                    checkDeliveryReadiness();
+                });
+            }
+
+            if (sigConfirmBtn) {
+                sigConfirmBtn.addEventListener('click', () => {
+                    if (!hasDrawn) {
+                        alert("Please have the receiver sign inside the signature box first.");
+                        return;
+                    }
+                    sigDataInput.value = sigCanvas.toDataURL();
+                    signatureCaptured = true;
+                    sigStatusBadge.className = 'badge bg-success';
+                    sigStatusBadge.innerHTML = 'Captured ✓';
+                    if (sigConfirmedBadge) sigConfirmedBadge.style.display = 'block';
+                    checkDeliveryReadiness();
+                });
+            }
+        }
+
+        // --- SENDER PICKUP SIGNATURE CANVAS ---
+        const pickupCanvas = document.getElementById('pickup-sig-canvas');
+        if (pickupCanvas) {
+            const pCtx = pickupCanvas.getContext('2d');
+            const pClearBtn = document.getElementById('pickup-sig-clear-btn');
+            const pSigInput = document.getElementById('pickup-sig-data-input');
+            let pIsDrawing = false;
+            let pLastX = 0, pLastY = 0;
+
+            pCtx.strokeStyle = '#0f172a';
+            pCtx.lineJoin = 'round';
+            pCtx.lineCap = 'round';
+            pCtx.lineWidth = 3;
+
+            function pDraw(e) {
+                if (!pIsDrawing) return;
+                const rect = pickupCanvas.getBoundingClientRect();
+                const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+                const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+                pCtx.beginPath();
+                pCtx.moveTo(pLastX, pLastY);
+                pCtx.lineTo(x, y);
+                pCtx.stroke();
+                pLastX = x;
+                pLastY = y;
+            }
+
+            pickupCanvas.addEventListener('mousedown', (e) => {
+                pIsDrawing = true;
+                const rect = pickupCanvas.getBoundingClientRect();
+                pLastX = e.clientX - rect.left;
+                pLastY = e.clientY - rect.top;
+            });
+            pickupCanvas.addEventListener('mousemove', pDraw);
+            pickupCanvas.addEventListener('mouseup', () => pIsDrawing = false);
+            pickupCanvas.addEventListener('mouseout', () => pIsDrawing = false);
+
+            pickupCanvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                pIsDrawing = true;
+                const rect = pickupCanvas.getBoundingClientRect();
+                pLastX = e.touches[0].clientX - rect.left;
+                pLastY = e.touches[0].clientY - rect.top;
+            });
+            pickupCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); pDraw(e); });
+            pickupCanvas.addEventListener('touchend', () => pIsDrawing = false);
+
+            if (pClearBtn) {
+                pClearBtn.addEventListener('click', () => {
+                    pCtx.clearRect(0, 0, pickupCanvas.width, pickupCanvas.height);
+                    pSigInput.value = '';
+                });
+            }
+        }
+
+        // Form Submit Guard
+        const form = document.getElementById('status-update-form');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                if (statusSelect.value === 'Delivered') {
+                    if (sigCanvas && sigDataInput && !sigDataInput.value) {
+                        sigDataInput.value = sigCanvas.toDataURL();
+                    }
+                    if (!photoCaptured || !signatureCaptured) {
+                        alert("Proof of delivery photo and receiver signature must both be captured before completing delivery.");
+                        e.preventDefault();
+                        return false;
+                    }
+                } else if (statusSelect.value === 'Picked Up') {
+                    if (pickupCanvas) {
+                        const pSigInput = document.getElementById('pickup-sig-data-input');
+                        if (pSigInput) pSigInput.value = pickupCanvas.toDataURL();
+                        if (sigDataInput) sigDataInput.value = pickupCanvas.toDataURL();
+                    }
+                }
+            });
+        }
+    });
+</script>
+
+<!-- Modal for Full Screen Image Preview -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-labelledby="imagePreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-dark text-white" style="border-radius: 16px 16px 0 0;">
+                <h6 class="modal-title fw-bold" id="imagePreviewModalLabel"><i class="fa-solid fa-box-open me-2 text-warning"></i>Product Cargo Image</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 text-center bg-light" style="border-radius: 0 0 16px 16px;">
+                <img id="modalPreviewImg" src="" alt="Product Image" class="img-fluid rounded-bottom" style="max-height: 80vh; width: 100%; object-fit: contain;">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

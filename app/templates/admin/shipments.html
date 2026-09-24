@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Shipments - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-boxes-packing me-2"></i>Shipment Orders</h4>
+        <small class="text-muted">Monitor package delivery lifecycle, adjust dispatch branches, and assign drivers.</small>
+    </div>
+    <a href="{{ url_for('admin.add_shipment') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-cart-plus me-1"></i>Book New Shipment</a>
+</div>
+
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Tracking Number</th>
+                        <th>Sender</th>
+                        <th>Receiver / Destination</th>
+                        <th>Package Info</th>
+                        <th>Cost</th>
+                        <th>Branch</th>
+                        <th>Assigned Courier</th>
+                        <th>Status</th>
+                        <th class="pe-4 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if shipments %}
+                        {% for sh in shipments %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex flex-column">
+                                    <strong class="text-primary">{{ sh.tracking_number }}</strong>
+                                    <small class="text-muted" style="font-size: 0.65rem;">Booked: {{ sh.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span>{{ sh.sender_name }}</span>
+                                    <small class="text-muted" style="font-size: 0.75rem;">{{ sh.sender_phone }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span>{{ sh.receiver_name }}</span>
+                                    <small class="text-muted" style="font-size: 0.75rem;"><i class="fa-solid fa-location-dot me-1 text-danger"></i>{{ sh.receiver_city }}, {{ sh.receiver_state }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if sh.package_image_path %}
+                                        <a href="#" data-bs-toggle="modal" data-bs-target="#imagePreviewModal" onclick="document.getElementById('modalPreviewImg').src='{{ url_for('static', filename=sh.package_image_path) }}'; return false;" title="Tap to zoom">
+                                            <img src="{{ url_for('static', filename=sh.package_image_path) }}" alt="Package" class="rounded border" style="width: 32px; height: 32px; object-fit: cover; cursor: pointer;">
+                                        </a>
+                                    {% else %}
+                                        <div class="rounded bg-light border d-flex align-items-center justify-content-center text-muted" style="width: 32px; height: 32px; font-size: 0.65rem;">
+                                            <i class="fa-solid fa-box"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div class="d-flex flex-column">
+                                        <span class="small fw-bold">{{ sh.package_category }}</span>
+                                        <small class="text-muted" style="font-size: 0.75rem;">{{ sh.package_weight }} kg | {{ sh.delivery_type }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="fw-bold text-success">₹{{ sh.shipping_cost }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ sh.branch.code if sh.branch else 'Unassigned' }}</span></td>
+                            <td>
+                                {% if sh.driver %}
+                                <span class="small"><i class="fa-solid fa-id-badge text-success me-1"></i>{{ sh.driver.user.username }}</span>
+                                {% else %}
+                                <span class="text-danger small"><i class="fa-solid fa-triangle-exclamation me-1"></i>No Driver</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge-status status-{{ sh.status.lower().replace(' ', '-') }}">
+                                    {{ sh.status }}
+                                </span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <a href="{{ url_for('customer.public_track', tracking_number=sh.tracking_number) }}" class="btn btn-outline-info btn-sm me-1" title="Track Live"><i class="fa-solid fa-route"></i></a>
+                                <a href="{{ url_for('customer.download_invoice', tracking_number=sh.tracking_number) }}" class="btn btn-outline-secondary btn-sm me-1" title="Invoice Receipt"><i class="fa-solid fa-file-pdf"></i></a>
+                                <a href="{{ url_for('admin.edit_shipment', id=sh.id) }}" class="btn btn-outline-primary btn-sm me-1" title="Dispatch/Edit"><i class="fa-solid fa-truck-ramp-box"></i></a>
+                                <a href="{{ url_for('admin.delete_shipment', id=sh.id) }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this shipment? All associated records will be deleted.')" title="Delete Cargo"><i class="fa-solid fa-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-cubes fa-2x mb-3 text-muted"></i>
+                                <p class="mb-0">No shipment logs found in database.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Full Screen Image Preview -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-labelledby="imagePreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-dark text-white" style="border-radius: 16px 16px 0 0;">
+                <h6 class="modal-title fw-bold" id="imagePreviewModalLabel"><i class="fa-solid fa-box-open me-2 text-warning"></i>Product Cargo Image</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 text-center bg-light" style="border-radius: 0 0 16px 16px;">
+                <img id="modalPreviewImg" src="" alt="Product Image" class="img-fluid rounded-bottom" style="max-height: 80vh; width: 100%; object-fit: contain;">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1075 @@
+{% extends "base.html" %}
+
+{% block title %}Track Shipment Cargo - LogiTrack{% endblock %}
+
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
+
+<!-- SVG Gradients & Glow Elements -->
+<svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
+    <defs>
+        <linearGradient id="route-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#3b82f6" />
+            <stop offset="50%" stop-color="#a855f7" />
+            <stop offset="100%" stop-color="#f43f5e" />
+        </linearGradient>
+    </defs>
+</svg>
+
+<style>
+    /* Premium Font overrides */
+    body {
+        font-family: 'Outfit', sans-serif !important;
+    }
+    
+    .map-title-overlay {
+        position: absolute;
+        top: 20px;
+        left: 320px;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.96);
+        padding: 12px 24px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    }
+    .title-overlay-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        background: rgba(79, 70, 229, 0.1);
+        color: #4f46e5;
+    }
+    
+    .map-live-badge {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.96);
+        padding: 10px 20px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    }
+    .live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #22c55e;
+        display: inline-block;
+        box-shadow: 0 0 8px #22c55e;
+        animation: live-blink 1.5s infinite ease-in-out;
+    }
+    @keyframes live-blink {
+        0%, 100% { opacity: 0.4; }
+        50% { opacity: 1; }
+    }
+    
+    .route-sidebar {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        bottom: 20px;
+        width: 280px;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.96);
+        border-radius: 24px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+    
+    .route-location-block {
+        display: flex;
+        flex-direction: column;
+    }
+    .route-label-from, .route-label-to {
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 1.5px;
+        color: #94a3b8;
+    }
+    .route-city-name {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 2px 0 0 0;
+    }
+    .city-img {
+        width: 100%;
+        height: 115px;
+        object-fit: cover;
+        border-radius: 16px;
+        margin-top: 8px;
+        border: 1px solid #f1f5f9;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    
+    /* Dotted connector status line */
+    .route-status-connector {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 5px 0;
+        position: relative;
+    }
+    .connector-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+    .connector-line-dotted {
+        width: 2px;
+        height: 25px;
+        border-left: 2px dotted #cbd5e1;
+    }
+    .connector-status-bubble {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        margin: 5px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    .status-bubble-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: rgba(79, 70, 229, 0.1);
+        color: #4f46e5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+    .status-bubble-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.2;
+        text-align: left;
+    }
+    .status-title {
+        font-size: 0.65rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+    .status-highlight {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #4f46e5;
+    }
+    .status-desc {
+        font-size: 0.6rem;
+        color: #94a3b8;
+        margin: 2px 0 0 0;
+    }
+    
+    /* Stepper Styling */
+    .stepper-container {
+        padding: 15px 0;
+    }
+    .step-item {
+        position: relative;
+        z-index: 10;
+    }
+    .step-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+        margin: 0 auto;
+        border: 3px solid white;
+    }
+    .step-line {
+        flex-grow: 1;
+        height: 4px;
+        background-color: #f1f5f9;
+        margin: 0 -15px;
+        z-index: 1;
+        border-radius: 2px;
+    }
+    .step-active-1 { background: linear-gradient(135deg, #3b82f6, #60a5fa) !important; color: white !important; }
+    .step-active-2 { background: linear-gradient(135deg, #6366f1, #818cf8) !important; color: white !important; }
+    .step-active-3 { background: linear-gradient(135deg, #a855f7, #c084fc) !important; color: white !important; }
+    .step-active-4 { background: linear-gradient(135deg, #ec4899, #f472b6) !important; color: white !important; }
+    .step-active-5 { background: linear-gradient(135deg, #f59e0b, #fbbf24) !important; color: white !important; }
+    .step-active-6 { background: linear-gradient(135deg, #10b981, #34d399) !important; color: white !important; }
+    .step-inactive { background: #cbd5e1 !important; color: #f8fafc !important; }
+    
+    .line-active-1 { background: linear-gradient(90deg, #3b82f6, #6366f1) !important; }
+    .line-active-2 { background: linear-gradient(90deg, #6366f1, #a855f7) !important; }
+    .line-active-3 { background: linear-gradient(90deg, #a855f7, #ec4899) !important; }
+    .line-active-4 { background: linear-gradient(90deg, #ec4899, #f59e0b) !important; }
+    .line-active-5 { background: linear-gradient(90deg, #f59e0b, #10b981) !important; }
+    .line-inactive { background: #f1f5f9 !important; }
+    
+    .map-icon {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.05rem;
+        border: 3px solid white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: transform 0.2s ease-in-out;
+        z-index: 10;
+        position: relative;
+    }
+    
+    /* Glassmorphism popups matching mockup */
+    .leaflet-popup-content-wrapper {
+        background: #ffffff !important;
+        color: #1e293b !important;
+        border-radius: 12px !important;
+        border: none !important;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06) !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-size: 0.75rem !important;
+        padding: 4px 10px !important;
+        font-weight: 600 !important;
+    }
+    .leaflet-popup-tip {
+        background: #ffffff !important;
+        box-shadow: none !important;
+    }
+    
+    /* Radar waves */
+    .radar-container {
+        position: relative;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .radar-ripple {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        pointer-events: none;
+        animation: radar-sweep 2.8s infinite cubic-bezier(0.215, 0.610, 0.355, 1);
+        z-index: -1;
+    }
+    @keyframes radar-sweep {
+        0% {
+            transform: scale(0.6);
+            opacity: 0.95;
+        }
+        100% {
+            transform: scale(2.8);
+            opacity: 0;
+        }
+    }
+    
+    /* SVG path flowing dashes */
+    .route-gradient-base {
+        stroke: url(#route-gradient) !important;
+    }
+    .route-flow-overlay {
+        stroke-dasharray: 8, 12;
+        animation: flow-dash 1s linear infinite;
+    }
+    @keyframes flow-dash {
+        to {
+            stroke-dashoffset: -20;
+        }
+    }
+    
+    .custom-div-icon {
+        background: transparent !important;
+        border: none !important;
+    }
+    
+    /* Glow effect on map container border */
+    .map-container {
+        border: 2px solid #3b82f6 !important;
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.25) !important;
+    }
+
+    /* Dark Mode Custom Overrides for Tracking Page */
+    body[data-theme="dark"] .route-sidebar {
+        background: rgba(30, 41, 59, 0.96) !important;
+        border-color: rgba(255, 255, 255, 0.05) !important;
+    }
+    body[data-theme="dark"] .route-city-name {
+        color: #f8fafc !important;
+    }
+    body[data-theme="dark"] .connector-status-bubble {
+        background: #0f172a !important;
+        border-color: #334155 !important;
+    }
+    body[data-theme="dark"] .status-highlight {
+        color: #818cf8 !important;
+    }
+    body[data-theme="dark"] .map-title-overlay {
+        background: rgba(30, 41, 59, 0.96) !important;
+        border-color: rgba(255, 255, 255, 0.05) !important;
+    }
+    body[data-theme="dark"] .map-title-overlay h6 {
+        color: #f8fafc !important;
+    }
+    body[data-theme="dark"] .map-live-badge {
+        background: rgba(30, 41, 59, 0.96) !important;
+        border-color: rgba(255, 255, 255, 0.05) !important;
+    }
+    body[data-theme="dark"] .leaflet-popup-content-wrapper {
+        background: #1e293b !important;
+        color: #f8fafc !important;
+    }
+    body[data-theme="dark"] .leaflet-popup-tip {
+        background: #1e293b !important;
+    }
+    body[data-theme="dark"] .leaflet-tile-container {
+        filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+    }
+    
+    /* Global text color overrides for dark mode */
+    body[data-theme="dark"] .text-slate-800 {
+        color: #f8fafc !important;
+    }
+    body[data-theme="dark"] .text-slate-700 {
+        color: #cbd5e1 !important;
+    }
+    body[data-theme="dark"] .card {
+        background-color: var(--card-bg-dark) !important;
+        border-color: var(--border-color-dark) !important;
+        color: var(--text-color-dark) !important;
+    }
+    body[data-theme="dark"] hr {
+        border-color: var(--border-color-dark) !important;
+    }
+    body[data-theme="dark"] .border-bottom {
+        border-color: var(--border-color-dark) !important;
+    }
+    body[data-theme="dark"] .border-top {
+        border-color: var(--border-color-dark) !important;
+    }
+</style>
+<div class="row mb-4">
+    <div class="col-lg-8 mx-auto text-center">
+        <h3 class="fw-bold text-primary" style="font-family: 'Outfit', sans-serif;"><i class="fa-solid fa-route me-2"></i>Cargo Tracking & Location Log</h3>
+        <p class="text-muted">Enter shipment tracking number below to view checkpoint history and current location details.</p>
+        
+        <form method="GET" action="{{ url_for('customer.public_track') }}" class="card p-3 shadow-sm border-0 bg-white mb-4" style="border-radius: 12px;">
+            <div class="row g-2">
+                <div class="col-md-9">
+                    <input type="text" name="tracking_number" class="form-control" placeholder="Enter tracking ID (e.g. LT-XXXX)" value="{{ search_query or '' }}" required>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100 fw-bold"><i class="fa-solid fa-magnifying-glass-location me-1"></i>Track Cargo</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if shipment %}
+<div class="row g-4 mb-4">
+    <!-- Map Container with Overlays -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm overflow-hidden position-relative" style="border-radius: 24px;">
+            <!-- Embedded Map -->
+            <div id="routing-map" class="map-container" style="height: 560px; border: none !important; border-radius: 24px; z-index: 1;"></div>
+            
+            <!-- Title Header Overlay -->
+            <div class="map-title-overlay shadow animate-fade-in">
+                <div class="title-overlay-icon text-primary">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0 text-slate-800" style="font-family: 'Outfit', sans-serif;">Live Delivery Map</h6>
+                    <small class="text-muted" style="font-size: 0.7rem;">We deliver happiness <span class="text-danger">♥</span></small>
+                </div>
+            </div>
+            
+            <!-- Live Tracking Badge Overlay -->
+            <div class="map-live-badge shadow animate-fade-in">
+                <span class="live-dot"></span>
+                <span class="fw-bold text-slate-700 small" style="font-size: 0.75rem; font-family: 'Outfit', sans-serif;">Live Tracking</span>
+            </div>
+            
+            <!-- Left Sidebar Overlay -->
+            <div class="route-sidebar shadow animate-fade-in">
+                <!-- Origin city -->
+                <div class="route-location-block text-start">
+                    <span class="route-label-from">FROM</span>
+                    <h4 class="route-city-name fw-bold" style="font-family: 'Outfit', sans-serif;">{{ shipment.pickup_city | capitalize }}</h4>
+                    <img src="{{ url_for('static', filename=pickup_img) }}" class="city-img" alt="{{ shipment.pickup_city }}">
+                </div>
+                
+                <!-- Connector & Status bubble -->
+                <div class="route-status-connector">
+                    <div class="connector-dot bg-primary"></div>
+                    <div class="connector-line-dotted"></div>
+                    
+                    <div class="connector-status-bubble">
+                        <div class="status-bubble-icon">
+                            <i class="fa-solid fa-truck"></i>
+                        </div>
+                        <div class="status-bubble-text">
+                            <span class="status-title">Your order is</span>
+                            <span class="status-highlight text-primary fw-bold" style="font-size: 0.8rem;">{{ shipment.status }}!</span>
+                            <p class="status-desc" style="font-size: 0.6rem; margin-top: 1px;">Driver heading to destination</p>
+                        </div>
+                    </div>
+                    
+                    <div class="connector-line-dotted"></div>
+                    <div class="connector-dot bg-success"></div>
+                </div>
+                
+                <!-- Destination city -->
+                <div class="route-location-block text-start">
+                    <span class="route-label-to">TO</span>
+                    <h4 class="route-city-name fw-bold" style="font-family: 'Outfit', sans-serif;">{{ shipment.receiver_city | capitalize }}</h4>
+                    <img src="{{ url_for('static', filename=receiver_img) }}" class="city-img" alt="{{ shipment.receiver_city }}">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <!-- Horizontal Stepper Card -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px; min-height: 160px;">
+            <div class="d-flex justify-content-between align-items-center h-100 stepper-container">
+                
+                <!-- Step 1: Order Placed -->
+                <div class="step-item text-center">
+                    <div class="step-circle {% if current_status_idx >= 0 %}step-active-1{% else %}step-inactive{% endif %}">
+                        <i class="fa-solid fa-box"></i>
+                    </div>
+                    <strong class="d-block mt-2 small text-slate-800" style="font-size: 0.68rem; line-height: 1.1;">Order Placed</strong>
+                    <small class="text-muted" style="font-size: 0.6rem;">
+                        {% if ns_time.booked != '--' %}
+                            {{ ns_time.booked }}
+                        {% else %}
+                            {{ shipment.created_at.strftime('%I:%M %p') }}
+                        {% endif %}
+                    </small>
+                </div>
+                
+                <div class="step-line {% if current_status_idx >= 2 %}line-active-1{% else %}line-inactive{% endif %}"></div>
+                
+                <!-- Step 2: Driver Assigned -->
+                <div class="step-item text-center">
+                    <div class="step-circle {% if current_status_idx >= 2 %}step-active-2{% else %}step-inactive{% endif %}">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+                    <strong class="d-block mt-2 small text-slate-800" style="font-size: 0.68rem; line-height: 1.1;">Driver Assigned</strong>
+                    <small class="text-muted" style="font-size: 0.6rem;">{{ ns_time.assigned }}</small>
+                </div>
+                
+                <div class="step-line {% if current_status_idx >= 3 %}line-active-2{% else %}line-inactive{% endif %}"></div>
+                
+                <!-- Step 3: Picked Up -->
+                <div class="step-item text-center">
+                    <div class="step-circle {% if current_status_idx >= 3 %}step-active-3{% else %}step-inactive{% endif %}">
+                        <i class="fa-solid fa-dolly"></i>
+                    </div>
+                    <strong class="d-block mt-2 small text-slate-800" style="font-size: 0.68rem; line-height: 1.1;">Picked Up</strong>
+                    <small class="text-muted" style="font-size: 0.6rem;">{{ ns_time.picked }}</small>
+                </div>
+                
+                <div class="step-line {% if current_status_idx >= 4 %}line-active-3{% else %}line-inactive{% endif %}"></div>
+                
+                <!-- Step 4: Warehouse (Origin) -->
+                <div class="step-item text-center">
+                    <div class="step-circle {% if current_status_idx >= 4 %}step-active-4{% else %}step-inactive{% endif %}">
+                        <i class="fa-solid fa-warehouse"></i>
+                    </div>
+                    <strong class="d-block mt-2 small text-slate-800" style="font-size: 0.68rem; line-height: 1.1;">{{ shipment.pickup_city | capitalize }} Warehouse</strong>
+                    <small class="text-muted" style="font-size: 0.6rem;">{{ ns_time.warehouse_origin }}</small>
+                </div>
+                
+                <div class="step-line {% if current_status_idx >= 5 %}line-active-3{% else %}line-inactive{% endif %}"></div>
+                
+                <!-- Step 5: In Transit -->
+                <div class="step-item text-center">
+                    <div class="step-circle {% if current_status_idx >= 5 %}step-active-4{% else %}step-inactive{% endif %}">
+                        <i class="fa-solid fa-truck-fast"></i>
+                    </div>
+                    <strong class="d-block mt-2 small text-slate-800" style="font-size: 0.68rem; line-height: 1.1;">In Transit</strong>
+                    <small class="text-muted" style="font-size: 0.6rem;">{{ ns_time.transit }}</small>
+                </div>
+                
+                <div class="step-line {% if current_status_idx >= 6 %}line-active-4{% else %}line-inactive{% endif %}"></div>
+                
+                <!-- Step 6: Warehouse (Destination) -->
+                <div class="step-item text-center">
+                    <div class="step-circle {% if current_status_idx >= 6 %}step-active-5{% else %}step-inactive{% endif %}">
+                        <i class="fa-solid fa-warehouse"></i>
+                    </div>
+                    <strong class="d-block mt-2 small text-slate-800" style="font-size: 0.68rem; line-height: 1.1;">{{ shipment.receiver_city | capitalize }} Warehouse</strong>
+                    <small class="text-muted" style="font-size: 0.6rem;">{{ ns_time.warehouse_dest }}</small>
+                </div>
+                
+                <div class="step-line {% if current_status_idx >= 7 %}line-active-5{% else %}line-inactive{% endif %}"></div>
+                
+                <!-- Step 7: Out for Delivery -->
+                <div class="step-item text-center">
+                    <div class="step-circle {% if current_status_idx >= 7 %}step-active-5{% else %}step-inactive{% endif %}">
+                        <i class="fa-solid fa-motorcycle"></i>
+                    </div>
+                    <strong class="d-block mt-2 small text-slate-800" style="font-size: 0.68rem; line-height: 1.1;">Out for Delivery</strong>
+                    <small class="text-muted" style="font-size: 0.6rem;">{{ ns_time.out }}</small>
+                </div>
+                
+                <div class="step-line {% if current_status_idx >= 8 %}line-active-5{% else %}line-inactive{% endif %}"></div>
+                
+                <!-- Step 8: Delivered -->
+                <div class="step-item text-center">
+                    <div class="step-circle {% if current_status_idx >= 8 %}step-active-6{% else %}step-inactive{% endif %}">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <strong class="d-block mt-2 small text-slate-800" style="font-size: 0.68rem; line-height: 1.1;">Delivered</strong>
+                    <small class="text-muted" style="font-size: 0.6rem;">{{ ns_time.delivered }}</small>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    
+    <!-- Safe Hands Driver Info Card -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm p-4 h-100 flex-row align-items-center justify-content-between" style="border-radius: 20px; min-height: 160px;">
+            <div style="width: 50%;">
+                <img src="{{ url_for('static', filename='images/delivery_scooter.jpg') }}" style="width: 100%; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);" alt="Delivery Courier">
+            </div>
+            <div style="width: 45%; text-align: center;">
+                <small class="text-muted d-block mb-1" style="font-size: 0.7rem; font-family: 'Outfit', sans-serif;">Your order is in</small>
+                <h4 class="fw-bold text-slate-800 mb-0" style="font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 1.3rem;">Safe Hands</h4>
+                <span class="text-danger" style="font-size: 1.5rem; line-height: 1;">♥</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="my-5" style="border-top: 1px dashed #cbd5e1;">
+
+{% if shipment.status in ['Delivered', 'Completed'] %}
+<!-- PROOF OF DELIVERY CARD -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm p-4 text-white" style="border-radius: 20px; background: linear-gradient(135deg, #065f46 0%, #047857 100%) !important;">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <span class="badge bg-white text-success fw-bold px-3 py-1 mb-2"><i class="fa-solid fa-circle-check me-1"></i>DELIVERED SUCCESSFULLY</span>
+                    <h3 class="fw-bold mb-1">Delivery Completed ✓</h3>
+                    <p class="text-white-50 mb-0">
+                        Received by <b class="text-white">{{ shipment.receiver_name }}</b> on 
+                        <b class="text-white">{{ shipment.delivered_at.strftime('%d %b %Y, %I:%M %p') if shipment.delivered_at else shipment.updated_at.strftime('%d %b %Y, %I:%M %p') }}</b>
+                        {% if shipment.driver %}
+                        • Delivered by <b class="text-white">{{ shipment.driver.user.username }}</b>
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <span class="badge bg-white bg-opacity-25 text-white px-3 py-2 fs-6">
+                        <i class="fa-solid fa-shield-halved me-1"></i>Verified Proof of Delivery
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Check: Visible to Sender, Customer, Manager, Driver, Admin -->
+    {% if g.user and (g.user.id == shipment.customer.user_id if shipment.customer else False or g.user.email == shipment.sender_email or (shipment.driver and g.user.id == shipment.driver.user_id) or (g.user.role and g.user.role.name in ['Branch Manager', 'Administrator'])) %}
+    <div class="col-12">
+        <div class="card border-0 shadow-sm p-4" style="border-radius: 20px;">
+            <h5 class="fw-bold text-success mb-3" style="font-family: 'Outfit', sans-serif;"><i class="fa-solid fa-shield-halved me-2"></i>Proof of Delivery (POD) Documentation</h5>
+            <div class="row g-4 align-items-center">
+                <div class="col-md-6 text-center">
+                    <div class="card border-0 bg-light p-3" style="border-radius: 16px;">
+                        <small class="text-muted fw-bold d-block mb-2"><i class="fa-solid fa-camera text-primary me-1"></i>Product Delivery Photo</small>
+                        {% if shipment.proof_image_path %}
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#imagePreviewModal" onclick="document.getElementById('modalPreviewImg').src='{{ url_for('static', filename=shipment.proof_image_path) }}'; return false;">
+                            <img src="{{ url_for('static', filename=shipment.proof_image_path) }}" alt="Delivery Photo" class="img-fluid rounded border shadow-sm" style="max-height: 220px; object-fit: contain; cursor: pointer;">
+                        </a>
+                        <small class="text-muted d-block mt-2" style="font-size: 0.7rem;"><i class="fa-solid fa-magnifying-glass-plus me-1"></i>Tap to view full resolution</small>
+                        {% else %}
+                        <div class="p-4 text-muted small">No product photo recorded</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6 text-center">
+                    <div class="card border-0 bg-light p-3" style="border-radius: 16px;">
+                        <small class="text-muted fw-bold d-block mb-2"><i class="fa-solid fa-signature text-success me-1"></i>Receiver Digital E-Signature</small>
+                        {% if shipment.delivery_signature_path or shipment.signature_path %}
+                        <img src="{{ url_for('static', filename=shipment.delivery_signature_path or shipment.signature_path) }}" alt="Receiver Signature" class="img-fluid rounded border shadow-sm bg-white p-2" style="max-height: 180px; object-fit: contain;">
+                        <small class="text-success fw-bold d-block mt-2" style="font-size: 0.75rem;"><i class="fa-solid fa-check-circle me-1"></i>Signed electronically by {{ shipment.receiver_name }}</small>
+                        {% else %}
+                        <div class="p-4 text-muted small">No electronic signature recorded</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Details and Logs Folddown Section -->
+<div class="row g-4 mb-4">
+    <!-- Shipment Info details -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px;">
+            <h5 class="fw-bold text-primary mb-3" style="font-family: 'Outfit', sans-serif;"><i class="fa-solid fa-circle-info me-2"></i>Detailed Shipment Specifications</h5>
+            
+            <div class="d-flex flex-column gap-3 small text-slate-700">
+                <div class="d-flex justify-content-between border-bottom pb-2"><b>Tracking ID:</b> <span class="fw-bold text-primary">{{ shipment.tracking_number }}</span></div>
+                
+                {% if shipment.current_container_id %}
+                <div class="d-flex justify-content-between border-bottom pb-2 align-items-center">
+                    <b>Container Transfer Unit:</b>
+                    <span>
+                        <span class="badge bg-dark text-warning font-monospace px-2 py-1"><i class="fa-solid fa-box-archive me-1"></i>{{ shipment.current_container_id }}</span>
+                        {% if shipment.is_container_locked %}
+                        <span class="badge bg-danger text-white ms-1"><i class="fa-solid fa-lock me-1"></i>Locked</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <b>Order Status:</b>
+                    <span class="badge-status status-{{ shipment.status.lower().replace(' ', '-') }} fw-bold py-1 px-2 text-uppercase" style="font-size: 0.68rem;">
+                        {{ shipment.status }}
+                    </span>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <b>Current Branch Hub:</b>
+                    <span>{{ shipment.branch.name if shipment.branch else 'Scheduling Pool' }}</span>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <b>Next Target Hub:</b>
+                    <span>{{ shipment.next_branch.name if shipment.next_branch else 'None (Final Destination reached)' }}</span>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <b>Assigned Local Driver:</b>
+                    <span>
+                        {% if shipment.driver and shipment.driver.vehicle and shipment.driver.vehicle.vehicle_type != 'Truck' %}
+                            <i class="fa-solid fa-id-badge text-success me-1"></i>{{ shipment.driver.user.username }} ({{ shipment.driver.phone }})
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <b>Assigned Container Driver:</b>
+                    <span>
+                        {% if shipment.driver and shipment.driver.vehicle and shipment.driver.vehicle.vehicle_type == 'Truck' %}
+                            <i class="fa-solid fa-truck-moving text-warning me-1"></i>{{ shipment.driver.user.username }} ({{ shipment.driver.phone }})
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <b>Total Shipping Rate:</b>
+                    <span class="fw-bold text-dark">₹{{ shipment.shipping_cost }}</span>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <b>Advance Paid (Online):</b>
+                    <span class="fw-bold text-success">- ₹{{ shipment.advance_paid or 0.0 }}</span>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <b>Balance Settled / Due:</b>
+                    <span>
+                        <b class="text-{{ 'success' if (shipment.shipping_cost - (shipment.advance_paid or 0.0)) <= 0 or (shipment.payment and shipment.payment.payment_status == 'Completed' and shipment.status not in ['Booked', 'Confirmed']) else 'danger' }}">
+                            ₹{{ [shipment.shipping_cost - (shipment.advance_paid or 0.0), 0]|max }}
+                        </b>
+                    </span>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <b>Payment Status:</b>
+                    <span>
+                        <span class="badge bg-light text-dark border me-1">{{ shipment.payment.payment_method if shipment.payment else 'Online Advance' }}</span>
+                        {% if shipment.payment and shipment.payment.payment_status == 'Completed' and shipment.status not in ['Booked', 'Confirmed', 'Branch Assigned', 'Driver Assigned'] %}
+                        <span class="badge bg-success">Fully Settled</span>
+                        {% elif shipment.advance_paid and shipment.advance_paid > 0 %}
+                        <span class="badge bg-warning text-dark">Advance Paid (Balance Pending)</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Pending</span>
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom pb-2 align-items-center">
+                    <b>E-Signature Status:</b>
+                    <span>
+                        {% if shipment.signature_path %}
+                            <span class="badge bg-success text-white me-2"><i class="fa-solid fa-signature me-1"></i>Signed</span>
+                            <img src="{{ url_for('static', filename=shipment.signature_path) }}" alt="Signature" class="border rounded bg-white p-1" style="max-height: 35px; max-width: 120px; object-fit: contain;">
+                        {% else %}
+                            <span class="badge bg-danger text-white"><i class="fa-solid fa-ban me-1"></i>No Signature Captured</span>
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="d-flex justify-content-between border-bottom pb-2"><b>Weight Class:</b> <span>{{ shipment.package_weight }} kg</span></div>
+                <div class="d-flex justify-content-between border-bottom pb-2"><b>Priority Speed:</b> <span>{{ shipment.delivery_type }}</span></div>
+                <div class="d-flex justify-content-between pb-2"><b>Insurance Cover:</b> <span>{{ 'Covered' if shipment.insurance else 'None' }}</span></div>
+            </div>
+            
+            <div class="mt-4 d-flex justify-content-center gap-4">
+                {% if shipment.package_image_path %}
+                <div>
+                    <small class="text-muted d-block mb-1 text-center">Product Image</small>
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#imagePreviewModal" onclick="document.getElementById('modalPreviewImg').src='{{ url_for('static', filename=shipment.package_image_path) }}'; return false;" title="Tap to expand">
+                        <img src="{{ url_for('static', filename=shipment.package_image_path) }}" alt="Product Image" style="width: 100px; height: 100px; object-fit: cover; cursor: pointer;" class="border rounded bg-white p-1">
+                    </a>
+                </div>
+                {% endif %}
+                {% if shipment.qr_code_path %}
+                <div>
+                    <small class="text-muted d-block mb-1 text-center">Receipt QR Code</small>
+                    <img src="{{ url_for('static', filename=shipment.qr_code_path) }}" alt="QR Code" style="width: 100px; height: 100px;" class="border rounded bg-white p-1">
+                </div>
+                {% endif %}
+                {% if shipment.barcode_path %}
+                <div>
+                    <small class="text-muted d-block mb-1 text-center">Container Barcode</small>
+                    <img src="{{ url_for('static', filename=shipment.barcode_path) }}" alt="Barcode" style="width: 180px; height: 60px;" class="border rounded bg-white p-1">
+                    <a href="{{ url_for('customer.download_invoice', tracking_number=shipment.tracking_number) }}" class="btn btn-outline-secondary btn-sm d-block mt-2 fw-bold"><i class="fa-solid fa-file-pdf me-1"></i>Download PDF Invoice</a>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if shipment.status in ['Booked', 'Payment Pending', 'Confirmed', 'Branch Assigned'] %}
+            <div class="mt-4 border-top pt-3 text-center">
+                <a href="{{ url_for('customer.cancel_shipment', id=shipment.id) }}" class="btn btn-outline-danger w-100 fw-bold" onclick="return confirm('Cancel this shipment?')"><i class="fa-solid fa-ban me-1"></i>Cancel Shipment Order</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Checkpoint Transit logs -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px;">
+            <h5 class="fw-bold text-primary mb-3" style="font-family: 'Outfit', sans-serif;"><i class="fa-solid fa-clipboard-list-check me-2"></i>Checkpoint Location Logs</h5>
+            <div class="d-flex flex-column gap-3" style="max-height: 480px; overflow-y: auto; text-align: left;">
+                {% if tracking_logs %}
+                    {% for log in tracking_logs %}
+                    <div class="border-start border-primary border-3 ps-3 py-1 position-relative">
+                        <div class="position-absolute top-50 start-0 translate-middle rounded-circle bg-primary" style="width: 10px; height: 10px;"></div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small fw-bold text-primary">{{ log.current_location | capitalize }}</span>
+                            <small class="text-muted" style="font-size: 0.65rem;">{{ log.update_time.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        <span class="badge bg-light text-dark mb-1 small">{{ log.status }}</span>
+                        <p class="mb-0 text-secondary small" style="font-size: 0.72rem;">{{ log.description }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted small text-center my-5">No checkpoint logs scanned yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal for Full Screen Image Preview -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-labelledby="imagePreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-dark text-white" style="border-radius: 16px 16px 0 0;">
+                <h6 class="modal-title fw-bold" id="imagePreviewModalLabel"><i class="fa-solid fa-box-open me-2 text-warning"></i>Product Cargo Image</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 text-center bg-light" style="border-radius: 0 0 16px 16px;">
+                <img id="modalPreviewImg" src="" alt="Product Image" class="img-fluid rounded-bottom" style="max-height: 80vh; width: 100%; object-fit: contain;">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block public_content %}
+<div class="container py-4">
+    {{ self.content() }}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if shipment %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Comprehensive city coordinates lookup
+        const cityCoordinates = {
+            "mumbai": [19.0760, 72.8777],
+            "bombay": [19.0760, 72.8777],
+            "delhi": [28.7041, 77.1025],
+            "new delhi": [28.6139, 77.2090],
+            "bangalore": [12.9716, 77.5946],
+            "bengaluru": [12.9716, 77.5946],
+            "mangalore": [12.9141, 74.8560],
+            "mangaluru": [12.9141, 74.8560],
+            "pune": [18.5204, 73.8567],
+            "chennai": [13.0827, 80.2707],
+            "madras": [13.0827, 80.2707],
+            "kolkata": [22.5726, 88.3639],
+            "calcutta": [22.5726, 88.3639],
+            "hyderabad": [17.3850, 78.4867],
+            "ahmedabad": [23.0225, 72.5714],
+            "jaipur": [26.9124, 75.7873],
+            "surat": [21.1702, 72.8311],
+            "lucknow": [26.8467, 80.9462],
+            "nagpur": [21.1458, 79.0882],
+            "indore": [22.7196, 75.8577],
+            "patna": [25.5941, 85.1376],
+            "bhopal": [23.2599, 77.4126],
+            "vadodara": [22.3072, 73.1812],
+            "baroda": [22.3072, 73.1812],
+            "mysore": [12.2958, 76.6394],
+            "mysuru": [12.2958, 76.6394],
+            "udupi": [13.3409, 74.7421],
+            "manipal": [13.3524, 74.7876],
+            "kochi": [9.9312, 76.2673],
+            "cochin": [9.9312, 76.2673],
+            "goa": [15.2993, 74.1240],
+            "panaji": [15.4909, 73.8278],
+            "hubli": [15.3647, 75.1240],
+            "dharwad": [15.4589, 75.0078],
+            "belgaum": [15.8497, 74.4977],
+            "belagavi": [15.8497, 74.4977],
+            "coimbatore": [11.0168, 76.9558],
+            "madurai": [9.9252, 78.1198],
+            "visakhapatnam": [17.6868, 83.2185],
+            "chandigarh": [30.7333, 76.7794],
+            "gurgaon": [28.4595, 77.0266],
+            "gurugram": [28.4595, 77.0266],
+            "noida": [28.5355, 77.3910],
+            "ghaziabad": [28.6692, 77.4538],
+            "thiruvananthapuram": [8.5241, 76.9366],
+            "trivandrum": [8.5241, 76.9366],
+            "calicut": [11.2588, 75.7804],
+            "kozhikode": [11.2588, 75.7804],
+            "shimoga": [13.9299, 75.5681],
+            "shivamogga": [13.9299, 75.5681],
+            "tumkur": [13.3379, 77.1006],
+            "tumakuru": [13.3379, 77.1006],
+            "hassan": [13.0033, 76.1004],
+            "davangere": [14.4644, 75.9218],
+            "bellary": [15.1394, 76.9214],
+            "ballari": [15.1394, 76.9214],
+            "gulbarga": [17.3297, 76.8343],
+            "kalaburagi": [17.3297, 76.8343]
+        };
+
+        function resolveCoords(name, defaultCoords) {
+            if (!name) return defaultCoords;
+            const clean = name.toLowerCase().trim();
+            for (const [key, coords] of Object.entries(cityCoordinates)) {
+                if (clean === key || clean.startsWith(key) || clean.includes(key)) {
+                    return coords;
+                }
+            }
+            return defaultCoords;
+        }
+
+        const originName = "{{ shipment.pickup_city }}";
+        const destName = "{{ shipment.receiver_city }}";
+        
+        const originCoords = resolveCoords(originName, [12.9716, 77.5946]); // Default Bangalore
+        const destCoords = resolveCoords(destName, [12.9141, 74.8560]);   // Default Mangalore
+
+        // shipment status progress mapping
+        const statusProgressMap = {
+            "booked": 0.08,
+            "payment pending": 0.08,
+            "confirmed": 0.18,
+            "driver assigned": 0.28,
+            "picked up": 0.42,
+            "warehouse": 0.58,
+            "in transit": 0.72,
+            "out for delivery": 0.88,
+            "delivered": 1.0,
+            "completed": 1.0
+        };
+        const shipmentStatus = "{{ shipment.status.lower().strip() }}";
+        const progress = statusProgressMap[shipmentStatus] !== undefined ? statusProgressMap[shipmentStatus] : 0.18;
+
+        // Calculate truck's current position interpolated along the route
+        const currentCoords = [
+            originCoords[0] + (destCoords[0] - originCoords[0]) * progress,
+            originCoords[1] + (destCoords[1] - originCoords[1]) * progress
+        ];
+
+        const isDelivered = (progress >= 1.0);
+
+        // Initialize Map centered between origin and destination
+        const map = L.map('routing-map', { 
+            zoomControl: false,
+            scrollWheelZoom: true
+        }).setView(originCoords, 7);
+        
+        // Add zoom control at bottom-right
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Standard OpenStreetMap / Carto basemap for reliable, crystal-clear road rendering
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Custom High-tech FontAwesome Marker Icons
+        const pickupIcon = L.divIcon({
+            html: '<div class="map-icon bg-primary text-white shadow"><i class="fa-solid fa-house-chimney"></i></div>',
+            className: 'custom-div-icon',
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
+        });
+
+        const deliveryIcon = L.divIcon({
+            html: '<div class="map-icon bg-success text-white shadow"><i class="fa-solid fa-location-dot"></i></div>',
+            className: 'custom-div-icon',
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
+        });
+
+        // Creative truck marker style matching mockup
+        const rippleColor = isDelivered ? 'rgba(34, 197, 94, 0.4)' : 'rgba(139, 92, 246, 0.4)';
+        const currentIcon = L.divIcon({
+            html: `
+                <div class="radar-container">
+                    <div class="radar-ripple" style="background: ${rippleColor}; animation-delay: 0s;"></div>
+                    <div class="radar-ripple" style="background: ${rippleColor}; animation-delay: 1.4s;"></div>
+                    <div class="map-icon text-white shadow" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; border: 3px solid #ffffff !important; box-shadow: 0 0 15px rgba(139, 92, 246, 0.6) !important;">
+                        <i class="fa-solid fa-truck-moving"></i>
+                    </div>
+                </div>
+            `,
+            className: 'custom-div-icon',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        });
+
+        // Add Origin & Destination markers with clear labels
+        const pickupMarker = L.marker(originCoords, { icon: pickupIcon }).addTo(map)
+            .bindPopup("<b>From: {{ shipment.pickup_city | capitalize }}</b><br/><small class='text-muted'>Pickup Location</small>");
+            
+        const deliveryMarker = L.marker(destCoords, { icon: deliveryIcon }).addTo(map)
+            .bindPopup("<b>To: {{ shipment.receiver_city | capitalize }}</b><br/><small class='text-muted'>Delivery Destination</small>");
+
+        let truckPopupText = "<b>Status: {{ shipment.status }}</b><br/><small class='text-muted'>Cargo in transit</small>";
+        if (shipmentStatus === 'confirmed' || shipmentStatus === 'booked' || shipmentStatus === 'payment pending') {
+            truckPopupText = "<b>Order {{ shipment.status }}</b><br/><small class='text-muted'>Preparing for dispatch</small>";
+        } else if (shipmentStatus === 'driver assigned') {
+            truckPopupText = "<b>Driver Assigned</b><br/><small class='text-muted'>Heading to pickup point</small>";
+        } else if (shipmentStatus === 'picked up') {
+            truckPopupText = "<b>Picked Up</b><br/><small class='text-muted'>En route to sorting hub</small>";
+        } else if (shipmentStatus === 'warehouse') {
+            truckPopupText = "<b>At Sorting Hub</b><br/><small class='text-muted'>Processing package</small>";
+        } else if (shipmentStatus === 'in transit') {
+            truckPopupText = "<b>In Transit</b><br/><small class='text-muted'>Traveling on regional highway</small>";
+        } else if (shipmentStatus === 'out for delivery') {
+            truckPopupText = "<b>Out for Delivery</b><br/><small class='text-muted'>Driver approaching destination 🛵</small>";
+        } else if (shipmentStatus === 'delivered' || shipmentStatus === 'completed') {
+            truckPopupText = "<b>Delivered Successfully!</b><br/><small class='text-muted'>Package received by customer</small>";
+        }
+
+        // Add truck marker along the route if not completed
+        if (!isDelivered) {
+            L.marker(currentCoords, { icon: currentIcon }).addTo(map)
+                .bindPopup(truckPopupText, { autoClose: false, closeOnClick: false })
+                .openPopup();
+        } else {
+            deliveryMarker.openPopup();
+        }
+
+        // 1. Completed path (neon gradient thick line) from origin to current position
+        L.polyline([originCoords, currentCoords], {
+            color: '#3b82f6',
+            weight: 7,
+            opacity: 0.95,
+            lineJoin: 'round',
+            className: 'route-gradient-base'
+        }).addTo(map);
+
+        // completed path flowing dots overlay (white dashed animated line)
+        L.polyline([originCoords, currentCoords], {
+            color: '#ffffff',
+            weight: 3,
+            opacity: 0.85,
+            lineJoin: 'round',
+            className: 'route-flow-overlay'
+        }).addTo(map);
+
+        // 2. Remaining planned path (dashed grey line) from current position to destination
+        L.polyline([currentCoords, destCoords], {
+            color: '#64748b',
+            weight: 4,
+            opacity: 0.7,
+            dashArray: '6, 10',
+            lineJoin: 'round'
+        }).addTo(map);
+
+        // Fit map bounds with proper padding accounting for the left overlay on desktop
+        const bounds = L.latLngBounds([originCoords, destCoords]);
+        const isDesktop = window.innerWidth >= 992;
+        const padLeft = isDesktop ? 340 : 50;
+        const padTop = isDesktop ? 90 : 50;
+        const padRight = isDesktop ? 70 : 50;
+        const padBottom = isDesktop ? 70 : 50;
+
+        map.fitBounds(bounds, {
+            paddingTopLeft: [padLeft, padTop],
+            paddingBottomRight: [padRight, padBottom],
+            maxZoom: 12
+        });
+
+        // Ensure proper rendering after DOM layout finishes
+        setTimeout(() => {
+            map.invalidateSize();
+            map.fitBounds(bounds, {
+                paddingTopLeft: [padLeft, padTop],
+                paddingBottomRight: [padRight, padBottom],
+                maxZoom: 12
+            });
+        }, 300);
+    });
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,14 @@
+Flask>=3.0.0
+Flask-SQLAlchemy>=3.1.0
+Flask-Session>=0.8.0
+PyMySQL>=1.1.0
+psycopg2-binary>=2.9.9
+gunicorn>=21.2.0
+reportlab>=4.0.0
+qrcode>=7.4.0
+python-barcode>=0.15.0
+openpyxl>=3.1.5
+pandas>=2.2.0
+numpy>=1.26.0
+Pillow>=10.0.0
+cryptography>=42.0.0

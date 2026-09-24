@@ -1,0 +1,420 @@
+/* LogiTrack Welcome Splash Screen - Complete Logo & Moving Truck Mover Theme */
+
+body.splash-active {
+    overflow: hidden !important;
+}
+
+.splash-screen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #030611 0%, #080e22 50%, #030611 100%);
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
+}
+
+/* Background Grid Pattern */
+.splash-screen-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(59, 130, 246, 0.012) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.012) 1px, transparent 1px);
+    background-size: 60px 60px;
+    background-position: center;
+    pointer-events: none;
+}
+
+/* Radial Glow */
+.splash-bg-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 95vw;
+    height: 95vh;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, rgba(245, 158, 11, 0.02) 65%, transparent 80%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Content Container */
+.splash-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 800px;
+    padding: 2rem;
+    text-align: center;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s;
+}
+
+/* SVG Container Styling - Auto height to prevent text overlaps */
+.splash-logo-container {
+    width: 100%;
+    margin-bottom: 1.5rem;
+}
+
+.splash-svg {
+    filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.55));
+}
+
+/* 1. Hexagon drawing */
+.emblem-hex {
+    fill: none;
+    stroke: #f59e0b;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 400;
+    stroke-dashoffset: 400;
+    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.5));
+    animation: draw-hexagon 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
+}
+
+@keyframes draw-hexagon {
+    50% {
+        stroke-dashoffset: 0;
+        fill: rgba(245, 158, 11, 0);
+    }
+    100% {
+        stroke-dashoffset: 0;
+        fill: rgba(245, 158, 11, 0.04);
+    }
+}
+
+/* Radar Hexagon (fades and scales slightly) */
+.radar-hex {
+    transform-origin: 400px 85px;
+    opacity: 0;
+    animation: radar-pulse 2.2s ease-out 1.5s infinite;
+}
+
+@keyframes radar-pulse {
+    0% {
+        transform: scale(0.98);
+        opacity: 0;
+    }
+    50% {
+        opacity: 0.4;
+    }
+    100% {
+        transform: scale(1.08);
+        opacity: 0;
+    }
+}
+
+/* Static Official Logo inside Hexagon */
+#static-official-logo {
+    opacity: 0;
+    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.6));
+    animation: reveal-logo 1.5s ease-out 0.4s forwards;
+}
+
+@keyframes reveal-logo {
+    to {
+        opacity: 1;
+    }
+}
+
+/* 2. Moving Road Traveler / Mover Truck (Graceful 5.5s transit) */
+#moving-track-mover {
+    animation: drive-across 5.5s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.45));
+}
+
+@keyframes drive-across {
+    0% {
+        transform: translate(-150px, 168px) scale(0.9);
+    }
+    100% {
+        transform: translate(950px, 168px) scale(0.9);
+    }
+}
+
+.mover-truck-cargo {
+    fill: #090f1d;
+    stroke: #3b82f6;
+    stroke-width: 2.2;
+}
+
+.mover-brand-text {
+    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    fill: #ffffff;
+    filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.8));
+}
+
+.mover-truck-cabin {
+    fill: #090f1d;
+    stroke: #3b82f6;
+    stroke-width: 2.2;
+}
+
+.mover-truck-window {
+    fill: rgba(6, 182, 212, 0.25);
+    stroke: #06b6d4;
+    stroke-width: 1.2;
+    filter: drop-shadow(0 0 3px rgba(6, 182, 212, 0.5));
+}
+
+.mover-truck-chassis {
+    fill: #1e293b;
+    stroke: #3b82f6;
+    stroke-width: 1;
+}
+
+/* Spinning Animation applied to inner concentric group to prevent collapsing translate attributes */
+.mover-wheel-spin {
+    animation: spin-wheels-infinite 0.5s linear infinite;
+    transform-origin: 0px 0px;
+}
+
+@keyframes spin-wheels-infinite {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Realistic Rubber Tire & Rim styling */
+.mover-wheel-tire {
+    fill: #18181b; /* Dark charcoal rubber */
+    stroke: #27272a;
+    stroke-width: 1.5;
+}
+
+.mover-wheel-rim {
+    fill: #e2e8f0; /* Metallic steel silver */
+    stroke: #94a3b8;
+    stroke-width: 0.8;
+}
+
+.mover-wheel-spoke {
+    stroke: #475569; /* Silver steel spokes */
+    stroke-width: 1.5;
+    stroke-linecap: round;
+}
+
+.mover-wheel-bolt {
+    fill: #18181b;
+}
+
+/* Road Line scrolling */
+.road-line {
+    stroke: #3b82f6;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 6 10;
+    opacity: 0.65;
+    animation: road-scroll-infinite 1s linear infinite;
+}
+
+@keyframes road-scroll-infinite {
+    from { stroke-dashoffset: 40; }
+    to { stroke-dashoffset: 0; }
+}
+
+/* Glow Circle Background */
+.emblem-glow-circle {
+    opacity: 0;
+    transform: scale(0.8);
+    transform-origin: 400px 85px;
+    animation: reveal-glow 2s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+}
+
+@keyframes reveal-glow {
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Brand Typography below the Emblem */
+#logo-text-group {
+    text-align: center;
+    margin-top: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.splash-logo-title {
+    color: #ffffff;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 3.2rem;
+    margin: 0;
+    letter-spacing: 4px;
+    filter: drop-shadow(0 2px 10px rgba(59, 130, 246, 0.3));
+}
+
+.splash-logo-subtitle {
+    color: #94a3b8;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: reveal-subtitle 0.6s ease-out 2.3s forwards;
+}
+
+@keyframes reveal-subtitle {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Character slow reveal delays */
+.char {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(12px) scale(0.85);
+    filter: blur(4px);
+    animation: reveal-char 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.font-extrabold {
+    font-weight: 800;
+}
+
+.c-1 { animation-delay: 1.4s; }
+.c-2 { animation-delay: 1.5s; }
+.c-3 { animation-delay: 1.6s; }
+.c-4 { animation-delay: 1.7s; }
+.c-5 { animation-delay: 1.8s; }
+.c-6 { animation-delay: 1.9s; }
+.c-7 { animation-delay: 2.0s; }
+.c-8 { animation-delay: 2.1s; }
+.c-9 { animation-delay: 2.2s; }
+
+@keyframes reveal-char {
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+}
+
+/* Snappy Loader - Spaced out below typography */
+.splash-loader-bar {
+    width: 240px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 20px;
+    margin: 2.5rem 0 1.5rem 0;
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.splash-loader-progress {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6 0%, #f59e0b 50%, #10b981 100%);
+    border-radius: 20px;
+    animation: progress-fill 3.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+}
+
+@keyframes progress-fill {
+    0% { width: 0%; }
+    100% { width: 100%; }
+}
+
+.splash-tagline {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    min-height: 20px;
+    transition: opacity 0.15s ease;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Skip Button */
+#skip-splash-btn {
+    position: absolute;
+    bottom: 35px;
+    right: 35px;
+    z-index: 100000;
+    color: rgba(255, 255, 255, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background-color: transparent;
+    padding: 0.4rem 1.2rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    border-radius: 50px;
+}
+
+#skip-splash-btn:hover {
+    color: #ffffff;
+    border-color: rgba(59, 130, 246, 0.5);
+    background-color: rgba(59, 130, 246, 0.08);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Exit Transition Details */
+.splash-screen-overlay.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
+}
+
+.splash-screen-overlay.fade-out .splash-content {
+    opacity: 0;
+    transform: scale(1.05) translateY(-10px);
+    filter: blur(8px);
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s, filter 0.6s;
+}
+
+.splash-screen-overlay.hidden {
+    display: none !important;
+}
+
+.hover-white {
+    transition: color 0.3s;
+}
+.hover-white:hover {
+    color: #ffffff !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    .splash-logo-container {
+        margin-bottom: 1rem;
+    }
+    
+    .splash-logo-title {
+        font-size: 2.4rem !important;
+    }
+    
+    .splash-logo-subtitle {
+        font-size: 0.7rem !important;
+        letter-spacing: 3px !important;
+    }
+    
+    #skip-splash-btn {
+        bottom: 20px;
+        right: 20px;
+    }
+}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Branches - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-warehouse me-2"></i>Branch Offices</h4>
+        <small class="text-muted">Manage company regional hubs, sorting terminals, and warehouse addresses.</small>
+    </div>
+    <a href="{{ url_for('admin.add_branch') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-square-plus me-1"></i>Add Branch</a>
+</div>
+
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Code</th>
+                        <th>Branch Name</th>
+                        <th>City / State</th>
+                        <th>Postal Code</th>
+                        <th>Phone</th>
+                        <th>Email Contact</th>
+                        <th>Staff Count</th>
+                        <th class="pe-4 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if branches %}
+                        {% for br in branches %}
+                        <tr>
+                            <td class="ps-4 fw-bold"><code>{{ br.code }}</code></td>
+                            <td>{{ br.name }}</td>
+                            <td>{{ br.city }}, {{ br.state }}</td>
+                            <td>{{ br.zip_code }}</td>
+                            <td>{{ br.phone }}</td>
+                            <td>{{ br.email }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ br.drivers|length }} drivers</span></td>
+                            <td class="pe-4 text-end">
+                                <a href="{{ url_for('admin.edit_branch', id=br.id) }}" class="btn btn-outline-primary btn-sm me-1" title="Edit Details"><i class="fa-solid fa-pen-to-square"></i></a>
+                                <a href="{{ url_for('admin.delete_branch', id=br.id) }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this branch? All driver profiles attached will become unassigned.')" title="Delete Branch"><i class="fa-solid fa-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-warehouse fa-2x mb-3 text-muted"></i>
+                                <p class="mb-0">No branch hubs found. Please insert a hub.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

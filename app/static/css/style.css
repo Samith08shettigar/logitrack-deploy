@@ -1,0 +1,486 @@
+/* LogiTrack Global Stylesheet */
+:root {
+    --primary-color: #1e3a8a;
+    --primary-light: #2563eb;
+    --primary-dark: #172554;
+    --secondary-color: #0f172a;
+    --accent-color: #f59e0b;
+    --bg-light: #f8fafc;
+    --card-bg-light: #ffffff;
+    --text-color-light: #1e293b;
+    --text-muted-light: #64748b;
+    --border-color-light: #e2e8f0;
+    
+    /* Dark Mode variables */
+    --bg-dark: #0f172a;
+    --card-bg-dark: #1e293b;
+    --text-color-dark: #f8fafc;
+    --text-muted-dark: #94a3b8;
+    --border-color-dark: #334155;
+    
+    /* Transition speeds */
+    --transition-speed: 0.3s;
+}
+
+/* Base resets and fonts */
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-color-light);
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+body[data-theme="dark"] {
+    background-color: var(--bg-dark);
+    color: var(--text-color-dark);
+}
+
+/* Background gradient styling for specific auth components */
+.auth-bg {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-light) 100%);
+    min-height: 100vh;
+}
+
+/* Glassmorphism auth card */
+.glass-card {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    border-radius: 16px;
+    backdrop-filter: blur(8px);
+    transition: transform var(--transition-speed);
+}
+
+body[data-theme="dark"] .glass-card {
+    background: rgba(30, 41, 59, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Theme styling for dashboard panels */
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar navigation */
+.sidebar {
+    width: 260px;
+    background-color: var(--primary-dark);
+    color: #ffffff;
+    transition: width var(--transition-speed);
+    flex-shrink: 0;
+    z-index: 100;
+}
+
+.sidebar-header {
+    background-color: rgba(0,0,0,0.2);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-menu-item a {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.sidebar-menu-item a:hover,
+.sidebar-menu-item.active a {
+    color: #ffffff;
+    background-color: rgba(255,255,255,0.08);
+    border-left-color: var(--accent-color);
+}
+
+.sidebar-menu-item a i {
+    width: 24px;
+    font-size: 1.1rem;
+    margin-right: 12px;
+}
+
+/* Main Dashboard content layout */
+.main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+.top-navbar {
+    background-color: var(--card-bg-light);
+    border-bottom: 1px solid var(--border-color-light);
+    padding: 1rem 1.5rem;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+body[data-theme="dark"] .top-navbar {
+    background-color: var(--card-bg-dark);
+    border-bottom: 1px solid var(--border-color-dark);
+}
+
+/* Card customizations */
+.kpi-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    background-color: var(--card-bg-light);
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed), background-color var(--transition-speed);
+}
+
+body[data-theme="dark"] .kpi-card {
+    background-color: var(--card-bg-dark);
+}
+
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+/* Tables styling */
+.custom-table {
+    color: inherit;
+}
+
+.custom-table th {
+    background-color: rgba(0, 0, 0, 0.02);
+    color: var(--text-muted-light);
+    font-weight: 600;
+}
+
+body[data-theme="dark"] .custom-table th {
+    background-color: rgba(255, 255, 255, 0.02);
+    color: var(--text-muted-dark);
+}
+
+/* Status badging */
+.badge-status {
+    padding: 6px 12px;
+    border-radius: 50px;
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
+
+/* Custom styling for status badge colors */
+.status-booked { background-color: #eff6ff; color: #1d4ed8; }
+.status-payment-pending { background-color: #fffbeb; color: #b45309; }
+.status-confirmed { background-color: #f0fdf4; color: #15803d; }
+.status-branch-assigned { background-color: #fdf2f8; color: #be185d; }
+.status-driver-assigned { background-color: #faf5ff; color: #7e22ce; }
+.status-picked-up { background-color: #ecfeff; color: #0e7490; }
+.status-warehouse { background-color: #f1f5f9; color: #334155; }
+.status-in-transit { background-color: #e0f2fe; color: #0369a1; }
+.status-out-for-delivery { background-color: #f0fdfa; color: #0f766e; }
+.status-delivered, .status-completed { background-color: #dcfce7; color: #166534; }
+.status-cancelled { background-color: #fee2e2; color: #991b1b; }
+.status-returned { background-color: #ffedd5; color: #c2410c; }
+.status-failed-delivery { background-color: #fef2f2; color: #991b1b; }
+
+/* Signature Pad Canvas */
+#sig-canvas {
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    cursor: crosshair;
+    background-color: #f8fafc;
+}
+
+body[data-theme="dark"] #sig-canvas {
+    border-color: #475569;
+    background-color: #1e293b;
+}
+
+/* Maps container setting */
+.map-container {
+    height: 380px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-color-light);
+}
+
+body[data-theme="dark"] .map-container {
+    border-color: var(--border-color-dark);
+}
+
+/* Custom transitions and scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+body[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #475569;
+}
+
+/* Form controls under dark/light */
+.form-control, .form-select {
+    background-color: var(--card-bg-light);
+    color: var(--text-color-light);
+    border: 1px solid var(--border-color-light);
+}
+
+body[data-theme="dark"] .form-control, 
+body[data-theme="dark"] .form-select {
+    background-color: var(--bg-dark);
+    color: var(--text-color-dark);
+    border: 1px solid var(--border-color-dark);
+}
+
+body[data-theme="dark"] .form-control:focus, 
+body[data-theme="dark"] .form-select:focus {
+    background-color: var(--bg-dark);
+    color: var(--text-color-dark);
+    border-color: var(--primary-light);
+}
+
+/* Footer layout */
+.footer {
+    margin-top: auto;
+    background-color: var(--secondary-color);
+    color: rgba(255,255,255,0.6);
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Responsive sidebars for tablets and phones */
+@media(max-width: 768px) {
+    .dashboard-container {
+        flex-direction: column;
+    }
+    .sidebar {
+        width: 100%;
+        height: auto;
+    }
+    .sidebar-menu {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    .sidebar-menu-item a {
+        padding: 10px 15px;
+    }
+}
+
+/* Progress Stepper & Workflow Elements */
+.stepper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    margin: 2rem 0;
+    padding: 0;
+    list-style: none;
+}
+
+.stepper::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background-color: var(--border-color-light);
+    z-index: 1;
+}
+
+body[data-theme="dark"] .stepper::before {
+    background-color: var(--border-color-dark);
+}
+
+.stepper-step {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    text-align: center;
+}
+
+.stepper-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: var(--card-bg-light);
+    border: 3px solid var(--border-color-light);
+    color: var(--text-muted-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: bold;
+    transition: all 0.4s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+body[data-theme="dark"] .stepper-icon {
+    background-color: var(--card-bg-dark);
+    border-color: var(--border-color-dark);
+    color: var(--text-muted-dark);
+}
+
+.stepper-step.completed .stepper-icon {
+    background-color: #22c55e;
+    border-color: #22c55e;
+    color: #ffffff;
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+}
+
+.stepper-step.active .stepper-icon {
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+    color: #ffffff;
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
+    transform: scale(1.1);
+}
+
+.stepper-label {
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted-light);
+    transition: color 0.4s ease;
+    max-width: 120px;
+}
+
+body[data-theme="dark"] .stepper-label {
+    color: var(--text-muted-dark);
+}
+
+.stepper-step.active .stepper-label {
+    color: var(--primary-light);
+    font-weight: 700;
+}
+
+.stepper-step.completed .stepper-label {
+    color: var(--text-color-light);
+}
+
+body[data-theme="dark"] .stepper-step.completed .stepper-label {
+    color: var(--text-color-dark);
+}
+
+.stepper-progress-bar {
+    position: absolute;
+    top: 25px;
+    left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #22c55e, var(--primary-light));
+    z-index: 1;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Micro-animations and hover enhancements */
+.hover-grow {
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.hover-grow:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Section Header styling */
+.section-title {
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.5px;
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 50px;
+    height: 4px;
+    border-radius: 2px;
+    background-color: var(--primary-light);
+}
+
+/* Timeline/Log checklist */
+.log-timeline {
+    position: relative;
+    border-left: 2px solid var(--border-color-light);
+    padding-left: 1.5rem;
+    margin-left: 1rem;
+}
+
+body[data-theme="dark"] .log-timeline {
+    border-left-color: var(--border-color-dark);
+}
+
+.log-timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.log-timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -1.95rem;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--border-color-light);
+    border: 2px solid var(--card-bg-light);
+}
+
+body[data-theme="dark"] .log-timeline-item::before {
+    background-color: var(--border-color-dark);
+    border-color: var(--card-bg-dark);
+}
+
+.log-timeline-item.active::before {
+    background-color: var(--primary-light);
+    box-shadow: 0 0 8px var(--primary-light);
+}
+
+.log-timeline-item.completed::before {
+    background-color: #22c55e;
+    box-shadow: 0 0 8px #22c55e;
+}
+
+/* Landing Page Card Hover Animation */
+.card-hover-animation {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-hover-animation:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1) !important;
+}

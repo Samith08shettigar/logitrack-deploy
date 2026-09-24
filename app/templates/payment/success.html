@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Successful - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto text-center py-5">
+        <div class="card border-0 shadow-sm kpi-card p-5 glass-card">
+            <div class="card-body">
+                <div class="d-inline-flex bg-success bg-opacity-10 text-success p-4 rounded-circle mb-4">
+                    <i class="fa-solid fa-circle-check fa-4x animate-bounce"></i>
+                </div>
+                
+                <h2 class="fw-bold text-success mb-2">Booking Confirmed!</h2>
+                <p class="text-muted">Your payment transaction was processed successfully. The logistics team has been dispatched to coordinate your pickup.</p>
+                
+                <div class="bg-light p-3 border rounded my-4 text-start small">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tracking Code</span>
+                        <strong class="text-primary">{{ shipment.tracking_number }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Paid Amount</span>
+                        <strong class="text-success">₹{{ shipment.shipping_cost }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Payment Type</span>
+                        <strong class="text-dark">{{ payment.payment_method }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Transaction ID</span>
+                        <strong class="text-secondary">{{ payment.transaction_id or 'COD (Hold)' }}</strong>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column gap-2">
+                    <a href="{{ url_for('customer.public_track', tracking_number=shipment.tracking_number) }}" class="btn btn-primary py-2 fw-bold"><i class="fa-solid fa-route me-2"></i>Track Shipment Live</a>
+                    <a href="{{ url_for('customer.download_invoice', tracking_number=shipment.tracking_number) }}" class="btn btn-outline-danger py-2 fw-bold"><i class="fa-solid fa-file-pdf me-2"></i>Download PDF Invoice</a>
+                    <a href="{{ url_for('customer.dashboard') }}" class="btn btn-outline-secondary py-2 fw-bold"><i class="fa-solid fa-house me-2"></i>Go to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

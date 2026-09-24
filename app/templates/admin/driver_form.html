@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} Driver - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-primary text-white py-3" style="border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-id-badge me-2 text-warning"></i>{{ action }} Driver Profile</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    {% if action == "Add" %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Username</label>
+                        <input type="text" name="username" class="form-control" placeholder="Enter username" required>
+                    </div>
+                    {% else %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Username</label>
+                        <input type="text" class="form-control" value="{{ driver.user.username }}" disabled>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email Address</label>
+                        <input type="email" name="email" class="form-control" value="{{ driver.user.email if driver else '' }}" placeholder="Enter email" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Phone Number</label>
+                        <input type="text" name="phone" class="form-control" value="{{ driver.phone if driver else '' }}" placeholder="Enter phone" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">License Number</label>
+                        <input type="text" name="license_number" class="form-control" value="{{ driver.license_number if driver else '' }}" placeholder="Enter license number" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Assigned Branch Hub</label>
+                        <select name="branch_id" class="form-select">
+                            <option value="">-- No Branch Assigned --</option>
+                            {% for b in branches %}
+                                <option value="{{ b.id }}" {% if driver and driver.branch_id == b.id %}selected{% endif %}>{{ b.name }} ({{ b.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Assigned Vehicle</label>
+                        <select name="vehicle_id" class="form-select">
+                            <option value="">-- No Vehicle Assigned --</option>
+                            {% for v in vehicles %}
+                                <option value="{{ v.id }}" {% if driver and driver.vehicle_id == v.id %}selected{% endif %}>{{ v.vehicle_number }} - {{ v.vehicle_type }} (Max: {{ v.capacity }} kg)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Driver Work Status</label>
+                            <select name="status" class="form-select">
+                                <option value="Available" {% if driver and driver.status == 'Available' %}selected{% endif %}>Available</option>
+                                <option value="Busy" {% if driver and driver.status == 'Busy' %}selected{% endif %}>Busy</option>
+                                <option value="Offline" {% if driver and driver.status == 'Offline' %}selected{% endif %}>Offline</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">{% if action == "Edit" %}Update Password (Leave blank to keep current){% else %}Account Password{% endif %}</label>
+                        <input type="password" name="password" class="form-control" placeholder="Enter password" {% if action == "Add" %}required{% endif %}>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-circle-check me-2"></i>Save Driver</button>
+                        <a href="{{ url_for('admin.list_drivers') }}" class="btn btn-outline-secondary w-50">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

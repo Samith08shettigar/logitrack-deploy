@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block public_content %}
+<div class="auth-bg py-5">
+    <div class="container">
+        <div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+            <div class="col-md-5">
+                <div class="text-center text-white mb-4">
+                    <i class="fa-solid fa-truck-ramp-box fa-3x mb-3 text-warning"></i>
+                    <h2 class="fw-bold">LogiTrack</h2>
+                    <p class="text-white-50">Smart Logistics & Freight Management</p>
+                </div>
+                
+                <div class="card border-0 glass-card">
+                    <div class="card-body p-4">
+                        <form method="POST" action="{{ url_for('auth.login') }}">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Username or Email</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-user text-muted"></i></span>
+                                    <input type="text" name="username" class="form-control bg-light border-start-0" placeholder="Enter username/email" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between">
+                                    <label class="form-label small fw-bold">Password</label>
+                                    <a href="{{ url_for('auth.reset_password') }}" class="small text-decoration-none text-muted">Forgot?</a>
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-key text-muted"></i></span>
+                                    <input type="password" name="password" class="form-control bg-light border-start-0" placeholder="Enter password" required>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold"><i class="fa-solid fa-right-to-bracket me-2"></i>Sign In</button>
+                        </form>
+                        
+                        <div class="text-center mt-4 border-top pt-3">
+                            <span class="small text-muted">Don't have an account? <a href="{{ url_for('auth.register') }}" class="fw-bold text-decoration-none text-primary ms-1">Sign Up</a></span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

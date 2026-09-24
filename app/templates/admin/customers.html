@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Customers - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-users me-2"></i>Customers Registry</h4>
+        <small class="text-muted">Manage system customer database accounts, review points, and statuses.</small>
+    </div>
+    <a href="{{ url_for('admin.add_customer') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-user-plus me-1"></i>Add Customer</a>
+</div>
+
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Loyalty Points</th>
+                        <th>Status</th>
+                        <th class="pe-4 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if customers %}
+                        {% for cust in customers %}
+                        <tr>
+                            <td class="ps-4 fw-bold">#{{ cust.id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                        <i class="fa-solid fa-user small"></i>
+                                    </div>
+                                    <span>{{ cust.user.username }}</span>
+                                </div>
+                            </td>
+                            <td>{{ cust.user.email }}</td>
+                            <td>{{ cust.phone }}</td>
+                            <td><span class="badge bg-light text-dark border"><i class="fa-solid fa-star text-warning me-1"></i>{{ cust.loyalty_points }} pts</span></td>
+                            <td>
+                                <span class="badge rounded-pill bg-{{ 'success' if cust.status == 'Active' else 'danger' }}">
+                                    {{ cust.status }}
+                                </span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <a href="{{ url_for('admin.edit_customer', id=cust.id) }}" class="btn btn-outline-primary btn-sm me-1" title="Edit Customer"><i class="fa-solid fa-pen-to-square"></i></a>
+                                <a href="{{ url_for('admin.delete_customer', id=cust.id) }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this customer? This will delete their user credentials permanently.')" title="Delete Profile"><i class="fa-solid fa-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-user-slash fa-2x mb-3 text-muted"></i>
+                                <p class="mb-0">No customer records found in the database.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

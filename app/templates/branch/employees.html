@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Branch Employees - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-users me-2"></i>Branch Driver Staff</h4>
+        <small class="text-muted">Managed Terminal: <b>{{ branch.name }}</b>. View drivers, license status, and vehicle assignments.</small>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Driver Username</th>
+                        <th>Phone</th>
+                        <th>License Number</th>
+                        <th>Vehicle Assigned</th>
+                        <th>Rating</th>
+                        <th class="pe-4 text-end">Work Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if drivers %}
+                        {% for drv in drivers %}
+                        <tr>
+                            <td class="ps-4 fw-bold">#{{ drv.id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                        <i class="fa-solid fa-id-badge small"></i>
+                                    </div>
+                                    <span>{{ drv.user.username }}</span>
+                                </div>
+                            </td>
+                            <td>{{ drv.phone }}</td>
+                            <td><code>{{ drv.license_number }}</code></td>
+                            <td>
+                                {% if drv.vehicle %}
+                                <span class="badge bg-secondary"><i class="fa-solid fa-truck me-1"></i>{{ drv.vehicle.vehicle_number }}</span>
+                                {% else %}
+                                <span class="text-danger small">No Vehicle</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="text-warning"><i class="fa-solid fa-star me-1"></i><b>{{ drv.rating }}</b></span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <span class="badge rounded-pill bg-{{ 'success' if drv.status == 'Available' else ('warning' if drv.status == 'Busy' else 'secondary') }}">
+                                    {{ drv.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-user-slash fa-2x mb-3 text-muted"></i>
+                                <p class="mb-0">No driver profiles attached to this branch.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

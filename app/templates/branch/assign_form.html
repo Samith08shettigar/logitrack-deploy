@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Courier - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-primary text-white py-3" style="border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-truck-loading me-2 text-warning"></i>Assign Courier & Vehicle</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-3 p-3 bg-light border rounded">
+                        <h6 class="fw-bold text-primary mb-2">Shipment details</h6>
+                        <p class="mb-1 small"><b>Tracking Number:</b> {{ shipment.tracking_number }}</p>
+                        <p class="mb-1 small"><b>Pickup Location:</b> {{ shipment.pickup_address_line }}, {{ shipment.pickup_city }}</p>
+                        <p class="mb-1 small"><b>Dropoff Destination:</b> {{ shipment.receiver_address_line }}, {{ shipment.receiver_city }}</p>
+                        <p class="mb-0 small"><b>Package Weight:</b> {{ shipment.package_weight }} kg (Category: {{ shipment.package_category }})</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Select Local Branch Driver</label>
+                        <select name="driver_id" class="form-select" required>
+                            <option value="">-- Choose Driver --</option>
+                            {% for d in drivers %}
+                                <option value="{{ d.id }}">{{ d.user.username }} (Phone: {{ d.phone }} | Rating: {{ d.rating }} Stars | Vehicle: {% if d.vehicle %}{{ d.vehicle.vehicle_type }} - {{ d.vehicle.vehicle_number }}{% else %}None{% endif %})</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text small">Only drivers currently status 'Available' at <b>{{ branch.name }}</b> are listed.</div>
+                    </div>
+
+                    {% if is_linehaul %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Select Target Next Hub</label>
+                        <select name="next_branch_id" class="form-select" required>
+                            <option value="">-- Choose Next Branch Hub --</option>
+                            {% for br in branches %}
+                                <option value="{{ br.id }}" {% if shipment.next_branch_id == br.id or (not shipment.next_branch_id and shipment.receiver_city.strip().lower() == br.city.strip().lower()) %}selected{% endif %}>{{ br.name }} ({{ br.code }} - {{ br.city }})</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text small">Select the next terminal hub for this container shipment.</div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-warning w-100 py-2 fw-bold text-dark"><i class="fa-solid fa-circle-check me-2"></i>Confirm Assignment</button>
+                        <a href="{{ url_for('branch.local_shipments') }}" class="btn btn-outline-secondary w-50">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

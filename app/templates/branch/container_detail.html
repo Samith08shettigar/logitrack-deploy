@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Container {{ container.transfer_code }} - LogiTrack{% endblock %}
+
+{% block content %}
+<!-- Container Header Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-dark text-white border-0 shadow-sm p-4" style="border-radius: 16px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <h3 class="fw-bold font-monospace text-warning mb-0"><i class="fa-solid fa-box-archive me-2"></i>{{ container.transfer_code }}</h3>
+                        {% if container.is_locked %}
+                        <span class="badge bg-danger text-white"><i class="fa-solid fa-lock me-1"></i>CONTAINER LOCKED</span>
+                        {% else %}
+                        <span class="badge bg-info text-dark"><i class="fa-solid fa-unlock me-1"></i>OPEN FOR PREPARATION</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-white-50 mb-0">
+                        Route: <b class="text-white">{{ container.from_branch.name }} ({{ container.from_branch.city }})</b> 
+                        <i class="fa-solid fa-arrow-right text-warning mx-2"></i> 
+                        <b class="text-white">{{ container.to_branch.name }} ({{ container.to_branch.city }})</b>
+                    </p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge-status status-{{ container.status.lower().replace(' ', '-') }} px-3 py-2 fs-6">
+                        {{ container.status|upper }}
+                    </span>
+                    {% if container.status == 'Arrived at Branch' and container.to_branch_id == branch.id %}
+                    <a href="{{ url_for('branch.receive_container', container_id=container.id) }}" class="btn btn-success fw-bold shadow">
+                        <i class="fa-solid fa-warehouse me-1"></i>Receive Entire Container
+                    </a>
+                    {% endif %}
+                    {% if not container.is_locked and container.from_branch_id == branch.id and container.status in ['Preparing', 'Driver Assigned'] %}
+                    <form method="POST" action="{{ url_for('branch.delete_container', container_id=container.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete Container {{ container.transfer_code }}? Any loaded orders will be returned to warehouse inventory.');">
+                        <button type="submit" class="btn btn-outline-danger btn-sm fw-bold px-3 py-2">
+                            <i class="fa-solid fa-trash-can me-1"></i>Delete Container
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Specs & Capacity Metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted fw-bold">ORDER CAPACITY</small>
+                    <span class="badge bg-primary">{{ container.total_orders }}/{{ container.max_orders_capacity }}</span>
+                </div>
+                <h4 class="fw-bold mb-2">{{ container.total_orders }} Orders Loaded</h4>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ (container.total_orders / container.max_orders_capacity * 100)|round }}%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted fw-bold">TOTAL CARGO WEIGHT</small>
+                    <span class="badge bg-secondary">{{ container.total_weight }} kg</span>
+                </div>
+                <h4 class="fw-bold mb-2">{{ container.total_weight }} kg</h4>
+                <small class="text-muted">Max Limit: {{ container.max_weight_capacity }} kg</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <small class="text-muted fw-bold d-block mb-1">ASSIGNED DRIVER</small>
+                {% if container.driver %}
+                <h5 class="fw-bold mb-0 text-success"><i class="fa-solid fa-id-badge me-1"></i>{{ container.driver.user.username }}</h5>
+                <small class="text-muted">Phone: {{ container.driver.phone }}</small>
+                {% else %}
+                <h5 class="fw-bold mb-0 text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>Unassigned</h5>
+                <small class="text-muted">Requires Driver</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <small class="text-muted fw-bold d-block mb-1">ASSIGNED VEHICLE</small>
+                {% if container.vehicle %}
+                <h5 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-truck me-1"></i>{{ container.vehicle.vehicle_number }}</h5>
+                <small class="text-muted">{{ container.vehicle.vehicle_type }} (Cap: {{ container.vehicle.capacity }} kg)</small>
+                {% else %}
+                <h5 class="fw-bold mb-0 text-muted">None</h5>
+                <small class="text-muted">Linehaul Truck</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Left Column: Loaded Orders Manifest -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold text-primary">
+                    <i class="fa-solid fa-boxes-stacked me-2"></i>Loaded Orders Manifest ({{ container.total_orders }})
+                </h6>
+                {% if not container.is_locked and container.from_branch_id == branch.id and not container.is_full %}
+                <span class="badge bg-success bg-opacity-10 text-success">
+                    {{ container.available_capacity }} Slots Available
+                </span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 custom-table">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">#</th>
+                                <th>Tracking Number</th>
+                                <th>Receiver & Destination</th>
+                                <th>Weight</th>
+                                <th>Status</th>
+                                {% if not container.is_locked and container.from_branch_id == branch.id and container.status in ['Preparing', 'Driver Assigned'] %}
+                                <th class="pe-3 text-end">Remove</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if container.shipments %}
+                                {% for sh in container.shipments %}
+                                <tr>
+                                    <td class="ps-3 text-muted">{{ loop.index }}</td>
+                                    <td>
+                                        <a href="{{ url_for('customer.public_track', tracking_number=sh.tracking_number) }}" target="_blank" class="fw-bold text-primary font-monospace">
+                                            {{ sh.tracking_number }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="small fw-semibold">{{ sh.receiver_name }}</span>
+                                            <small class="text-muted"><i class="fa-solid fa-location-dot text-danger me-1"></i>{{ sh.receiver_city }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="small">{{ sh.package_category }} (<b>{{ sh.package_weight }} kg</b>)</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge-status status-{{ sh.status.lower().replace(' ', '-') }}">
+                                            {{ sh.status }}
+                                        </span>
+                                    </td>
+                                    {% if not container.is_locked and container.from_branch_id == branch.id and container.status in ['Preparing', 'Driver Assigned'] %}
+                                    <td class="pe-3 text-end">
+                                        <form method="POST" action="{{ url_for('branch.remove_shipment_from_container', container_id=container.id, shipment_id=sh.id) }}" style="display: inline;" onsubmit="return confirm('Remove order {{ sh.tracking_number }} from this container?');">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2" title="Remove from container">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted small">
+                                        <i class="fa-solid fa-box-open fa-2x mb-2 text-muted"></i>
+                                        <p class="mb-0">No orders loaded into this container yet.</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Eligible Orders Section (Only if Preparing & Unlocked) -->
+        {% if not container.is_locked and container.from_branch_id == branch.id and container.status in ['Preparing', 'Driver Assigned'] and available_shipments %}
+        <div class="card border-0 shadow-sm kpi-card mt-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold text-success"><i class="fa-solid fa-plus-circle me-2"></i>Add Available Warehouse Orders to Container</h6>
+                <span class="badge bg-secondary">{{ available_shipments|length }} Ready in Warehouse</span>
+            </div>
+            <div class="card-body p-3">
+                <form method="POST" action="{{ url_for('branch.add_shipments_to_container', container_id=container.id) }}">
+                    <div class="table-responsive border rounded mb-3" style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0 custom-table">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-3" style="width: 40px;">
+                                        <input type="checkbox" class="form-check-input" id="select-add-all" onclick="toggleAddAll(this)">
+                                    </th>
+                                    <th>Tracking Number</th>
+                                    <th>Receiver</th>
+                                    <th>Final Dest</th>
+                                    <th>Weight</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sh in available_shipments %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <input type="checkbox" name="shipment_ids" value="{{ sh.id }}" class="form-check-input add-shipment-checkbox">
+                                    </td>
+                                    <td><strong class="text-primary font-monospace">{{ sh.tracking_number }}</strong></td>
+                                    <td>{{ sh.receiver_name }}</td>
+                                    <td><span class="badge bg-light text-dark border">{{ sh.receiver_city }}</span></td>
+                                    <td>{{ sh.package_weight }} kg</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm fw-bold">
+                        <i class="fa-solid fa-plus me-1"></i>Add Selected Orders to Container
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Driver Assignment & Transfer Controls -->
+    <div class="col-lg-4">
+        {% if not container.is_locked and container.from_branch_id == branch.id %}
+        <div class="card border-0 shadow-sm kpi-card p-4 mb-4">
+            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-truck-moving me-2 text-warning"></i>Assign Container Truck Driver</h6>
+            
+            <form method="POST" action="{{ url_for('branch.assign_container_driver', container_id=container.id) }}">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Select Local Container Driver</label>
+                    <select name="driver_id" class="form-select" required>
+                        <option value="">-- Choose Container Driver --</option>
+                        {% for d in available_truck_drivers %}
+                            <option value="{{ d.id }}" {% if container.driver_id == d.id %}selected{% endif %}>
+                                {{ d.user.username }} (Vehicle: {{ d.vehicle.vehicle_number if d.vehicle else 'Truck' }} | Rating: {{ d.rating }}★){% if container.driver_id == d.id %} [ASSIGNED ✓]{% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text small">Only available drivers & trucks currently stationed at <b>{{ branch.name }}</b> are listed.</div>
+                </div>
+
+                {% if container.driver and not container.is_locked %}
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-warning flex-grow-1 py-2 fw-bold text-dark shadow-sm">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i>Update Driver
+                    </button>
+                    <button type="submit" form="unassign-driver-form" class="btn btn-outline-danger py-2 fw-bold shadow-sm" onclick="return confirm('Unassign driver from this container?');">
+                        <i class="fa-solid fa-user-xmark me-1"></i>Unassign
+                    </button>
+                </div>
+                {% else %}
+                <button type="submit" class="btn btn-warning w-100 py-2 fw-bold text-dark shadow-sm" {% if container.total_orders == 0 %}disabled{% endif %}>
+                    <i class="fa-solid fa-circle-check me-2"></i>Confirm Container Assignment
+                </button>
+                {% endif %}
+            </form>
+
+            <form id="unassign-driver-form" method="POST" action="{{ url_for('branch.unassign_container_driver', container_id=container.id) }}" style="display: none;"></form>
+        </div>
+        {% elif container.is_locked %}
+        <div class="card border-0 shadow-sm kpi-card p-4 mb-4 bg-light">
+            <div class="text-center py-3">
+                <i class="fa-solid fa-lock text-danger fa-3x mb-2"></i>
+                <h6 class="fw-bold text-danger mb-1">🔒 CONTAINER LOCKED FOR TRANSFER</h6>
+                <p class="text-muted small mb-0">Driver has accepted the assignment. Contents and route are frozen and read-only during linehaul transit.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Timestamps & Milestones Log -->
+        <div class="card border-0 shadow-sm kpi-card p-4">
+            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-timeline me-2"></i>Transfer Timeline</h6>
+            <div class="d-flex flex-column gap-2 small">
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">Created:</span>
+                    <span>{{ container.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">Driver Assigned:</span>
+                    <span>{{ container.assigned_at.strftime('%Y-%m-%d %H:%M') if container.assigned_at else 'Pending' }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">Accepted & Locked:</span>
+                    <span>{{ container.accepted_at.strftime('%Y-%m-%d %H:%M') if container.accepted_at else 'Pending' }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">Cargo Loaded:</span>
+                    <span>{{ container.received_at.strftime('%Y-%m-%d %H:%M') if container.received_at else 'Pending' }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">In Transit (Departed):</span>
+                    <span>{{ container.departed_at.strftime('%Y-%m-%d %H:%M') if container.departed_at else 'Pending' }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2">
+                    <span class="text-muted">Arrived at Terminal:</span>
+                    <span>{{ container.arrived_at.strftime('%Y-%m-%d %H:%M') if container.arrived_at else 'Pending' }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Received at Dest:</span>
+                    <span>{{ container.branch_received_at.strftime('%Y-%m-%d %H:%M') if container.branch_received_at else 'Pending' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAddAll(master) {
+    const checkboxes = document.querySelectorAll('.add-shipment-checkbox');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+}
+</script>
+{% endblock %}

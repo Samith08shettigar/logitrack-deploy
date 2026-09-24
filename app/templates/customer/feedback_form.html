@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Feedback - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-primary text-white py-3" style="border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-star me-2 text-warning"></i>Submit Delivery Feedback</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-4 text-center">
+                        <p class="text-muted small">How was your delivery experience for shipment <b>{{ shipment.tracking_number }}</b>?</p>
+                        
+                        <!-- Star Selection Group -->
+                        <div class="d-flex justify-content-center gap-3 fs-2 my-3 text-secondary" id="star-rating-box">
+                            <i class="fa-regular fa-star star-btn" data-value="1" style="cursor: pointer;"></i>
+                            <i class="fa-regular fa-star star-btn" data-value="2" style="cursor: pointer;"></i>
+                            <i class="fa-regular fa-star star-btn" data-value="3" style="cursor: pointer;"></i>
+                            <i class="fa-regular fa-star star-btn" data-value="4" style="cursor: pointer;"></i>
+                            <i class="fa-regular fa-star star-btn" data-value="5" style="cursor: pointer;"></i>
+                        </div>
+                        <input type="hidden" name="rating" id="rating-input" value="5">
+                        <span class="badge bg-warning text-dark fs-6" id="rating-label">5 Stars (Excellent)</span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Comments / Experience notes</label>
+                        <textarea name="comment" class="form-control" rows="4" placeholder="Write any comments regarding the delivery speed, packaging condition, or driver behavior..." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold"><i class="fa-solid fa-circle-check me-2"></i>Submit Review (+10 points)</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Star Rating click selector JS
+    const stars = document.querySelectorAll('.star-btn');
+    const ratingInput = document.getElementById('rating-input');
+    const ratingLabel = document.getElementById('rating-label');
+    
+    const labelTexts = {
+        1: "1 Star (Very Poor)",
+        2: "2 Stars (Poor)",
+        3: "3 Stars (Average)",
+        4: "4 Stars (Good)",
+        5: "5 Stars (Excellent)"
+    };
+    
+    stars.forEach(s => {
+        s.addEventListener('click', () => {
+            const val = parseInt(s.getAttribute('data-value'));
+            ratingInput.value = val;
+            ratingLabel.innerText = labelTexts[val];
+            
+            // Toggle star icons
+            stars.forEach((star, idx) => {
+                if (idx < val) {
+                    star.className = 'fa-solid fa-star text-warning star-btn';
+                } else {
+                    star.className = 'fa-regular fa-star text-secondary star-btn';
+                }
+            });
+        });
+    });
+    
+    // Set 5 stars by default on start
+    stars[4].click();
+</script>
+{% endblock %}

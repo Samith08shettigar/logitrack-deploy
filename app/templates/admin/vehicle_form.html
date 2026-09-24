@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} Vehicle - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-primary text-white py-3" style="border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-truck-moving me-2 text-warning"></i>{{ action }} Fleet Vehicle</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Vehicle Plate Number</label>
+                            <input type="text" name="vehicle_number" class="form-control" value="{{ vehicle.vehicle_number if vehicle else '' }}" placeholder="e.g. MH-02-CP-8822" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Vehicle Type</label>
+                            <select name="vehicle_type" class="form-select" required>
+                                <option value="Truck" {% if vehicle and vehicle.vehicle_type == 'Truck' %}selected{% endif %}>Truck (Container)</option>
+                                <option value="Van" {% if vehicle and vehicle.vehicle_type == 'Van' %}selected{% endif %}>Van (Cargo)</option>
+                                <option value="Electric Van" {% if vehicle and vehicle.vehicle_type == 'Electric Van' %}selected{% endif %}>Electric Van</option>
+                                <option value="Two-Wheeler" {% if vehicle and vehicle.vehicle_type == 'Two-Wheeler' %}selected{% endif %}>Two-Wheeler (Delivery Bike)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Weight Capacity (kg)</label>
+                            <input type="number" name="capacity" class="form-control" value="{{ vehicle.capacity if vehicle else '' }}" min="1" step="0.1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Fuel Type</label>
+                            <select name="fuel_type" class="form-select" required>
+                                <option value="Diesel" {% if vehicle and vehicle.fuel_type == 'Diesel' %}selected{% endif %}>Diesel</option>
+                                <option value="Petrol" {% if vehicle and vehicle.fuel_type == 'Petrol' %}selected{% endif %}>Petrol</option>
+                                <option value="Electric" {% if vehicle and vehicle.fuel_type == 'Electric' %}selected{% endif %}>Electric</option>
+                                <option value="CNG" {% if vehicle and vehicle.fuel_type == 'CNG' %}selected{% endif %}>CNG</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Insurance Expiry Date</label>
+                        <input type="date" name="insurance_expiry" class="form-control" value="{{ vehicle.insurance_expiry.strftime('%Y-%m-%d') if vehicle else '' }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Assigned Branch Hub</label>
+                        <select name="branch_id" class="form-select">
+                            <option value="">-- No Branch Assigned --</option>
+                            {% for b in branches %}
+                                <option value="{{ b.id }}" {% if vehicle and vehicle.branch_id == b.id %}selected{% endif %}>{{ b.name }} ({{ b.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Maintenance Status</label>
+                            <select name="maintenance_status" class="form-select">
+                                <option value="Good" {% if vehicle and vehicle.maintenance_status == 'Good' %}selected{% endif %}>Good Condition</option>
+                                <option value="Needs Service" {% if vehicle and vehicle.maintenance_status == 'Needs Service' %}selected{% endif %}>Needs Service</option>
+                                <option value="Under Repair" {% if vehicle and vehicle.maintenance_status == 'Under Repair' %}selected{% endif %}>Under Repair</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Availability Status</label>
+                            <select name="availability" class="form-select">
+                                <option value="Available" {% if vehicle and vehicle.availability == 'Available' %}selected{% endif %}>Available</option>
+                                <option value="In Use" {% if vehicle and vehicle.availability == 'In Use' %}selected{% endif %}>In Use</option>
+                                <option value="Out of Service" {% if vehicle and vehicle.availability == 'Out of Service' %}selected{% endif %}>Out of Service</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-circle-check me-2"></i>Save Vehicle</button>
+                        <a href="{{ url_for('admin.list_vehicles') }}" class="btn btn-outline-secondary w-50">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

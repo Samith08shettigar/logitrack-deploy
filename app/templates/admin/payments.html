@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Payments - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-file-invoice-dollar me-2"></i>Financial Payment Audit</h4>
+        <small class="text-muted">Review cash-on-delivery invoices, verify card transaction IDs, and trigger refunds.</small>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Tracking Number</th>
+                        <th>Billing Amount</th>
+                        <th>Payment Method</th>
+                        <th>Transaction ID</th>
+                        <th>Receipt Invoice</th>
+                        <th>Status</th>
+                        <th>Billing Date</th>
+                        <th class="pe-4 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if payments %}
+                        {% for pay in payments %}
+                        <tr>
+                            <td class="ps-4 fw-bold">#{{ pay.id }}</td>
+                            <td><strong class="text-primary">{{ pay.shipment.tracking_number }}</strong></td>
+                            <td class="fw-bold text-success">₹{{ pay.amount }}</td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="fa-solid fa-{{ 'credit-card' if 'Online' in pay.payment_method else 'hand-holding-dollar' }} me-1 text-primary"></i>
+                                    {{ pay.payment_method }}
+                                </span>
+                            </td>
+                            <td><code>{{ pay.transaction_id or 'COD (No Hash)' }}</code></td>
+                            <td>
+                                {% if pay.shipment.invoice %}
+                                <a href="{{ url_for('customer.download_invoice', tracking_number=pay.shipment.tracking_number) }}" class="btn btn-link btn-sm text-decoration-none px-0"><i class="fa-solid fa-file-pdf text-danger me-1"></i>{{ pay.shipment.invoice.invoice_number }}</a>
+                                {% else %}
+                                <span class="text-muted small">No Invoice</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill bg-{{ 'success' if pay.payment_status == 'Completed' else ('warning' if pay.payment_status == 'Pending' else 'danger') }}">
+                                    {{ pay.payment_status }}
+                                </span>
+                            </td>
+                            <td class="small text-muted">{{ pay.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td class="pe-4 text-end">
+                                <a href="{{ url_for('admin.edit_payment', id=pay.id) }}" class="btn btn-outline-primary btn-sm" title="Verify / Adjust Status"><i class="fa-solid fa-pen-to-square"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-file-invoice-dollar fa-2x mb-3 text-muted"></i>
+                                <p class="mb-0">No transaction payments logged.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

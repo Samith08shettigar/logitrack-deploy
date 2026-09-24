@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Prepare Container - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-primary text-white py-3" style="border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-truck-ramp-box me-2 text-warning"></i>Prepare Multi-Shipment Container Transfer</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <!-- Origin and Destination -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Origin Terminal (Current Branch)</label>
+                            <input type="text" class="form-control bg-light" value="{{ branch.name }} ({{ branch.code }} - {{ branch.city }})" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Destination Next Branch Hub</label>
+                            <select name="to_branch_id" class="form-select" required>
+                                {% for b in branches %}
+                                    <option value="{{ b.id }}" {% if default_next_branch and default_next_branch.id == b.id %}selected{% endif %}>
+                                        {{ b.name }} ({{ b.code }} - {{ b.city }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text small">Select the next terminal along the transit route.</div>
+                        </div>
+                    </div>
+
+                    <!-- Open Existing Container Suggestion Banner -->
+                    {% if open_containers %}
+                    <div class="alert alert-warning border-warning d-flex align-items-center justify-content-between p-3 mb-4" style="border-radius: 10px;">
+                        <div>
+                            <h6 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-boxes-packing text-warning me-2"></i>Active Open Containers Already Exist:</h6>
+                            <div class="d-flex flex-wrap gap-2 mt-1">
+                                {% for c in open_containers %}
+                                <a href="{{ url_for('branch.container_detail', container_id=c.id) }}" class="badge bg-dark text-warning p-2 text-decoration-none">
+                                    <i class="fa-solid fa-box-open me-1"></i>{{ c.transfer_code }} &rarr; {{ c.to_branch.city }} ({{ c.total_orders }}/{{ c.max_orders_capacity }} orders)
+                                </a>
+                                {% endfor %}
+                            </div>
+                            <small class="text-muted d-block mt-1">Tip: Click on an existing container above to add more items to it without creating a duplicate container.</small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Container Specs & Capacity Guidelines -->
+                    <div class="alert alert-info py-2 px-3 mb-4 d-flex align-items-center justify-content-between" style="border-radius: 8px;">
+                        <span class="small">
+                            <i class="fa-solid fa-info-circle me-1"></i>
+                            <b>Container Transfer Rule:</b> One container truck carries multiple orders together. You can add up to <b>20 orders</b> per container.
+                        </span>
+                        <span class="badge bg-primary">Max Capacity: 20 Orders / 5000 kg</span>
+                    </div>
+
+                    <!-- Available Orders Selection Table -->
+                    <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-boxes-stacked me-1"></i>Select Initial Orders to Load into Container</h6>
+                    <div class="table-responsive border rounded mb-4" style="max-height: 380px; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0 custom-table">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-3" style="width: 40px;">
+                                        <input type="checkbox" class="form-check-input" id="select-all-shipments" onclick="toggleSelectAll(this)">
+                                    </th>
+                                    <th>Tracking Number</th>
+                                    <th>Customer / Receiver</th>
+                                    <th>Final Destination</th>
+                                    <th>Weight & Category</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if ready_shipments %}
+                                    {% for sh in ready_shipments %}
+                                    <tr>
+                                        <td class="ps-3">
+                                            <input type="checkbox" name="shipment_ids" value="{{ sh.id }}" class="form-check-input shipment-checkbox">
+                                        </td>
+                                        <td>
+                                            <strong class="text-primary font-monospace">{{ sh.tracking_number }}</strong>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-column">
+                                                <span class="small fw-semibold">{{ sh.receiver_name }}</span>
+                                                <small class="text-muted">{{ sh.receiver_phone }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="fa-solid fa-location-dot text-danger me-1"></i>{{ sh.receiver_city }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="small">{{ sh.package_category }} (<b>{{ sh.package_weight }} kg</b>)</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge-status status-{{ sh.status.lower().replace(' ', '-') }}">
+                                                {{ sh.status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted small">
+                                            No eligible warehouse shipments currently awaiting container transfer at this branch.
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('branch.list_containers') }}" class="btn btn-outline-secondary">
+                            <i class="fa-solid fa-arrow-left me-1"></i>Back to Containers
+                        </a>
+                        <button type="submit" class="btn btn-warning px-4 py-2 fw-bold text-dark shadow-sm">
+                            <i class="fa-solid fa-box-open me-2"></i>Create Container & Load Selected Orders
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleSelectAll(master) {
+    const checkboxes = document.querySelectorAll('.shipment-checkbox');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+}
+</script>
+{% endblock %}

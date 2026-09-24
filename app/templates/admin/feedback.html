@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Reviews & Feedbacks - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-comments me-2"></i>Customer Delivery Reviews</h4>
+        <small class="text-muted">Review customer satisfaction reports, courier rating logs, and comments.</small>
+    </div>
+</div>
+
+<div class="row g-3">
+    {% if feedbacks %}
+        {% for feed in feedbacks %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm kpi-card p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="small fw-bold text-primary">{{ feed.customer.user.username }}</span>
+                        <small class="text-muted d-block" style="font-size: 0.65rem;">Shipment: <b>{{ feed.shipment.tracking_number }}</b></small>
+                    </div>
+                    <div class="text-warning">
+                        {% for i in range(feed.rating) %}
+                            <i class="fa-solid fa-star small"></i>
+                        {% endfor %}
+                        {% for i in range(5 - feed.rating) %}
+                            <i class="fa-regular fa-star small"></i>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="border-top pt-2 mt-2">
+                    <p class="mb-0 small text-secondary italic">"{{ feed.comment or 'No comment left.' }}"</p>
+                </div>
+                <div class="text-end mt-3">
+                    <small class="text-muted" style="font-size: 0.65rem;"><i class="fa-regular fa-calendar-check me-1"></i>{{ feed.submitted_at.strftime('%Y-%m-%d') }}</small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="card border-0 p-5 text-center text-muted">
+                <i class="fa-regular fa-comments fa-3x mb-3 text-muted"></i>
+                <h5>No customer reviews available yet.</h5>
+                <p class="small mb-0">Reviews will be populated once shipments are marked as Delivered and feedback is submitted by customers.</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

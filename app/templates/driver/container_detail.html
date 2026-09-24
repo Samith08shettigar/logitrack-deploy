@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Container {{ container.transfer_code }} - Driver Panel{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-dark text-white border-0 shadow-sm p-4" style="border-radius: 16px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <h3 class="fw-bold font-monospace text-warning mb-0"><i class="fa-solid fa-truck-moving me-2"></i>{{ container.transfer_code }}</h3>
+                        {% if container.is_locked %}
+                        <span class="badge bg-danger text-white"><i class="fa-solid fa-lock me-1"></i>LOCKED FOR TRANSFER</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-white-50 mb-0">
+                        Linehaul Route: <b class="text-white">{{ container.from_branch.name }}</b> 
+                        <i class="fa-solid fa-arrow-right text-warning mx-2"></i> 
+                        <b class="text-white">{{ container.to_branch.name }} ({{ container.to_branch.city }})</b>
+                    </p>
+                </div>
+                <div>
+                    <span class="badge-status status-{{ container.status.lower().replace(' ', '-') }} px-3 py-2 fs-6">
+                        {{ container.status|upper }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Container Specs Grid -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <small class="text-muted fw-bold d-block mb-1">TOTAL ORDERS LOADED</small>
+                <h4 class="fw-bold mb-0 text-primary">{{ container.total_orders }} Orders</h4>
+                <small class="text-muted">Multi-shipment batch transfer</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <small class="text-muted fw-bold d-block mb-1">TOTAL CARGO WEIGHT</small>
+                <h4 class="fw-bold mb-0 text-dark">{{ container.total_weight }} kg</h4>
+                <small class="text-muted">Truck capacity verified</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card kpi-card">
+            <div class="card-body">
+                <small class="text-muted fw-bold d-block mb-1">ASSIGNED VEHICLE</small>
+                <h4 class="fw-bold mb-0 text-success">{{ container.vehicle.vehicle_number if container.vehicle else 'Linehaul Truck' }}</h4>
+                <small class="text-muted">{{ container.vehicle.vehicle_type if container.vehicle else 'Heavy Truck' }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sequential Action Flow Card -->
+<div class="card border-0 shadow-sm kpi-card p-4 mb-4">
+    <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-clipboard-check me-2"></i>Container Dispatch Progression</h5>
+    
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        {% if container.status == 'Driver Assigned' %}
+            <a href="{{ url_for('driver.container_action', container_id=container.id, action='accept') }}" class="btn btn-success px-4 py-2 fw-bold shadow-sm">
+                <i class="fa-solid fa-circle-check me-2"></i>Accept Container Transfer
+            </a>
+            <a href="{{ url_for('driver.container_action', container_id=container.id, action='reject') }}" class="btn btn-outline-danger px-3 py-2 fw-bold" onclick="return confirm('Reject this container assignment?');">
+                <i class="fa-solid fa-circle-xmark me-2"></i>Reject
+            </a>
+        {% elif container.status == 'Accepted' %}
+            <a href="{{ url_for('driver.container_action', container_id=container.id, action='receive_cargo') }}" class="btn btn-warning px-4 py-2 fw-bold text-dark shadow-sm">
+                <i class="fa-solid fa-box-open me-2"></i>Received Shipment (Confirm All Orders Loaded in Truck)
+            </a>
+        {% elif container.status == 'Received Shipment' %}
+            <a href="{{ url_for('driver.container_action', container_id=container.id, action='start_transfer') }}" class="btn btn-info text-white px-4 py-2 fw-bold shadow-sm">
+                <i class="fa-solid fa-truck-fast me-2"></i>Start Transfer (Depart for {{ container.to_branch.city }})
+            </a>
+        {% elif container.status == 'In Transit' %}
+            <a href="{{ url_for('driver.container_action', container_id=container.id, action='arrive_at_branch') }}" class="btn btn-success px-4 py-2 fw-bold shadow-sm">
+                <i class="fa-solid fa-location-dot me-2"></i>Arrived at Branch ({{ container.to_branch.city }} Terminal)
+            </a>
+        {% elif container.status == 'Arrived at Branch' %}
+            <div class="alert alert-success d-flex align-items-center mb-0 w-100 py-3" style="border-radius: 12px;">
+                <i class="fa-solid fa-circle-check fa-2x me-3 text-success"></i>
+                <div>
+                    <h6 class="fw-bold mb-1">Arrived at {{ container.to_branch.name }} Terminal</h6>
+                    <p class="small mb-0 text-muted">You have safely delivered the container. Waiting for the destination Branch Manager to click <b>Receive Entire Container</b>.</p>
+                </div>
+            </div>
+        {% elif container.status == 'Completed' %}
+            <div class="alert alert-primary d-flex align-items-center mb-0 w-100 py-3" style="border-radius: 12px;">
+                <i class="fa-solid fa-award fa-2x me-3 text-primary"></i>
+                <div>
+                    <h6 class="fw-bold mb-1">Container Transfer Completed</h6>
+                    <p class="small mb-0 text-muted">All orders inside this container were successfully received into the destination hub inventory.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Manifest Table -->
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="mb-0 fw-bold text-primary"><i class="fa-solid fa-boxes-stacked me-2"></i>Orders Manifest ({{ container.total_orders }} Packages Loaded)</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-3">#</th>
+                        <th>Tracking Number</th>
+                        <th>Receiver Name</th>
+                        <th>Final Destination</th>
+                        <th>Category</th>
+                        <th>Weight</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sh in container.shipments %}
+                    <tr>
+                        <td class="ps-3 text-muted">{{ loop.index }}</td>
+                        <td><strong class="text-primary font-monospace">{{ sh.tracking_number }}</strong></td>
+                        <td>{{ sh.receiver_name }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ sh.receiver_city }}</span></td>
+                        <td>{{ sh.package_category }}</td>
+                        <td><b>{{ sh.package_weight }} kg</b></td>
+                        <td>
+                            <span class="badge-status status-{{ sh.status.lower().replace(' ', '-') }}">{{ sh.status }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

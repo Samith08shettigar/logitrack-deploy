@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Drivers - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-id-badge me-2"></i>Drivers Registry</h4>
+        <small class="text-muted">Manage system fleet drivers, assign vehicles, monitor status and performance ratings.</small>
+    </div>
+    <a href="{{ url_for('admin.add_driver') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-user-plus me-1"></i>Add Driver</a>
+</div>
+
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Driver</th>
+                        <th>Phone</th>
+                        <th>License Number</th>
+                        <th>Assigned Vehicle</th>
+                        <th>Branch Hub</th>
+                        <th>Status</th>
+                        <th>Rating</th>
+                        <th class="pe-4 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if drivers %}
+                        {% for drv in drivers %}
+                        <tr>
+                            <td class="ps-4 fw-bold">#{{ drv.id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                        <i class="fa-solid fa-id-card small"></i>
+                                    </div>
+                                    <span>{{ drv.user.username }}</span>
+                                </div>
+                            </td>
+                            <td>{{ drv.phone }}</td>
+                            <td><code>{{ drv.license_number }}</code></td>
+                            <td>
+                                {% if drv.vehicle %}
+                                <span class="badge bg-secondary"><i class="fa-solid fa-truck me-1"></i>{{ drv.vehicle.vehicle_number }}</span>
+                                {% else %}
+                                <span class="text-danger small">No Vehicle</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ drv.branch.name if drv.branch else 'Unassigned' }}</td>
+                            <td>
+                                <span class="badge rounded-pill bg-{{ 'success' if drv.status == 'Available' else ('warning' if drv.status == 'Busy' else 'secondary') }}">
+                                    {{ drv.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="text-warning"><i class="fa-solid fa-star me-1"></i><b>{{ drv.rating }}</b></span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <a href="{{ url_for('admin.edit_driver', id=drv.id) }}" class="btn btn-outline-primary btn-sm me-1" title="Edit Driver"><i class="fa-solid fa-pen-to-square"></i></a>
+                                <a href="{{ url_for('admin.delete_driver', id=drv.id) }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this driver?')" title="Delete Profile"><i class="fa-solid fa-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-user-slash fa-2x mb-3 text-muted"></i>
+                                <p class="mb-0">No driver records found in the database.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

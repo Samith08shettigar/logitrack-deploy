@@ -1,0 +1,602 @@
+{% extends "base.html" %}
+
+{% block title %}Branch Management - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-primary text-white border-0 shadow-sm p-4" style="border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%) !important;">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <h3 class="fw-bold mb-1"><i class="fa-solid fa-industry text-warning me-2"></i>{{ branch.name }} Control Panel</h3>
+                    <p class="mb-0 text-white-50">Local Branch Terminal (Code: <code>{{ branch.code }}</code>). Linehaul multi-shipment containers, fleet dispatch, and incoming freight transfers.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('branch.branch_records') }}" class="btn btn-light fw-bold text-primary shadow-sm">
+                        <i class="fa-solid fa-clipboard-check me-1"></i>Branch Records & History
+                    </a>
+                    <a href="{{ url_for('branch.create_container') }}" class="btn btn-warning fw-bold text-dark shadow-sm">
+                        <i class="fa-solid fa-truck-ramp-box me-1"></i>Prepare Multi-Shipment Container
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fa-solid fa-boxes-packing"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ total_shipments }}</h3>
+                    <small class="text-muted small">Total Bookings</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-6 col-lg-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fa-solid fa-truck-moving"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ preparing_containers|length + in_transit_containers|length }}</h3>
+                    <small class="text-muted small">Active Containers</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-success bg-opacity-10 text-success">
+                    <i class="fa-solid fa-id-badge"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ available_drivers|length }} / {{ driver_count }}</h3>
+                    <small class="text-muted small">Available Drivers</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-danger bg-opacity-10 text-danger">
+                    <i class="fa-solid fa-truck"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ vehicle_count }}</h3>
+                    <small class="text-muted small">Fleet Vehicles</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Incoming Containers Queue (Arriving at this Hub) -->
+<div class="card border-0 shadow-sm kpi-card mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-success"><i class="fa-solid fa-truck-ramp-box me-2"></i>Incoming Containers (Destined for {{ branch.city }})</h5>
+        <span class="badge bg-success bg-opacity-10 text-success fw-bold">{{ incoming_containers|length }} Incoming</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Container ID</th>
+                        <th>Origin Hub</th>
+                        <th>Orders Loaded</th>
+                        <th>Assigned Driver</th>
+                        <th>Status</th>
+                        <th class="pe-4 text-end">Handover Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if incoming_containers %}
+                        {% for c in incoming_containers %}
+                        <tr>
+                            <td class="ps-4">
+                                <a href="{{ url_for('branch.container_detail', container_id=c.id) }}" class="fw-bold text-success font-monospace">
+                                    {{ c.transfer_code }}
+                                </a>
+                            </td>
+                            <td>{{ c.from_branch.name }} ({{ c.from_branch.city }})</td>
+                            <td>
+                                <span class="badge bg-dark">{{ c.total_orders }} Orders</span>
+                                <small class="text-muted ms-1">({{ c.total_weight }} kg)</small>
+                            </td>
+                            <td>
+                                {% if c.driver %}
+                                <span class="small fw-semibold"><i class="fa-solid fa-id-badge text-success me-1"></i>{{ c.driver.user.username }}</span>
+                                {% else %}
+                                <span class="text-muted small">No driver</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if c.status == 'Arrived at Branch' %}
+                                <span class="badge bg-success"><i class="fa-solid fa-check-circle me-1"></i>Arrived at Terminal</span>
+                                {% else %}
+                                <span class="badge-status status-in-transit">IN TRANSIT</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end">
+                                {% if c.status == 'Arrived at Branch' %}
+                                <a href="{{ url_for('branch.receive_container', container_id=c.id) }}" class="btn btn-success btn-sm fw-bold shadow-sm">
+                                    <i class="fa-solid fa-warehouse me-1"></i>Receive Entire Container
+                                </a>
+                                {% else %}
+                                <span class="text-muted small"><i class="fa-solid fa-route me-1"></i>In Transit</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <p class="mb-0 small"><i class="fa-solid fa-road-circle-check me-2"></i>No incoming containers currently in transit to this branch.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Active Multi-Shipment Containers Queue (Preparing & In Transit) -->
+<div class="card border-0 shadow-sm kpi-card mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-primary"><i class="fa-solid fa-truck-moving me-2 text-warning"></i>Dispatched & Preparing Multi-Shipment Containers</h5>
+        <a href="{{ url_for('branch.list_containers') }}" class="btn btn-outline-primary btn-sm fw-bold">View Container Hub</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Container ID</th>
+                        <th>Destination Hub</th>
+                        <th>Orders Inside</th>
+                        <th>Assigned Driver</th>
+                        <th>Status</th>
+                        <th>Lock Status</th>
+                        <th class="pe-4 text-end">Manage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set active_ct = preparing_containers + in_transit_containers %}
+                    {% if active_ct %}
+                        {% for c in active_ct %}
+                        <tr>
+                            <td class="ps-4">
+                                <a href="{{ url_for('branch.container_detail', container_id=c.id) }}" class="fw-bold font-monospace text-primary">
+                                    {{ c.transfer_code }}
+                                </a>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ c.to_branch.city }} ({{ c.to_branch.code }})</span></td>
+                            <td>
+                                <span class="badge bg-secondary">{{ c.total_orders }}/{{ c.max_orders_capacity }} Orders</span>
+                                <small class="text-muted ms-1">({{ c.total_weight }} kg)</small>
+                            </td>
+                            <td>
+                                {% if c.driver %}
+                                <span class="small fw-semibold"><i class="fa-solid fa-id-badge text-success me-1"></i>{{ c.driver.user.username }}</span>
+                                {% else %}
+                                <span class="text-danger small"><i class="fa-solid fa-triangle-exclamation me-1"></i>Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge-status status-{{ c.status.lower().replace(' ', '-') }}">{{ c.status }}</span>
+                            </td>
+                            <td>
+                                {% if c.is_locked %}
+                                <span class="badge bg-danger text-white"><i class="fa-solid fa-lock me-1"></i>LOCKED</span>
+                                {% else %}
+                                <span class="badge bg-info text-dark"><i class="fa-solid fa-unlock me-1"></i>Open</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="d-flex justify-content-end gap-1">
+                                    <a href="{{ url_for('branch.container_detail', container_id=c.id) }}" class="btn btn-outline-primary btn-sm fw-bold">
+                                        Manage
+                                    </a>
+                                    {% if not c.is_locked and c.from_branch_id == branch.id and c.status in ['Preparing', 'Driver Assigned'] %}
+                                    <form method="POST" action="{{ url_for('branch.delete_container', container_id=c.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete Container {{ c.transfer_code }}? Any loaded orders will be returned to warehouse inventory.');">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete Container">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted small">
+                                No multi-shipment containers currently active from this terminal.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Driver Cash Collections & Terminal Deposits Card -->
+{% if pending_cash_handovers %}
+<div class="card border-0 shadow-sm kpi-card mb-4 border-warning border-start border-4">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-hand-holding-dollar fa-lg text-warning"></i>
+            <h5 class="mb-0 fw-bold text-dark">Driver Cash Collections & Warehouse Deposits ({{ pending_cash_handovers|length }})</h5>
+        </div>
+        <span class="badge bg-warning text-dark fw-bold px-3 py-2">
+            Total Pending Deposit: ₹{{ pending_cash_handovers|sum(attribute='cash_collected_amount') }}
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Tracking ID</th>
+                        <th>Driver</th>
+                        <th>Sender / Origin</th>
+                        <th>Cash Amount</th>
+                        <th>Collection Date</th>
+                        <th>Custody Status</th>
+                        <th class="pe-4 text-end">Manager Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pay in pending_cash_handovers %}
+                    <tr>
+                        <td class="ps-4">
+                            <a href="{{ url_for('customer.public_track', tracking_number=pay.shipment.tracking_number) }}" target="_blank" class="fw-bold text-primary font-monospace text-decoration-none">
+                                {{ pay.shipment.tracking_number }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if pay.shipment.driver %}
+                            <span class="small fw-semibold text-success"><i class="fa-solid fa-id-badge me-1"></i>{{ pay.shipment.driver.user.username }}</span>
+                            {% else %}
+                            <span class="text-muted small">Pickup Courier</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ pay.shipment.sender_name }} ({{ pay.shipment.pickup_city }})</td>
+                        <td class="fw-bold text-success fs-6">₹{{ pay.cash_collected_amount }}</td>
+                        <td class="small text-muted">{{ pay.created_at.strftime('%d %b %Y, %I:%M %p') }}</td>
+                        <td>
+                            {% if pay.cash_status == 'Submitted to Manager' %}
+                                <span class="badge bg-success text-white py-1 px-2"><i class="fa-solid fa-hand-holding-dollar me-1"></i>Submitted by Driver</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark py-1 px-2"><i class="fa-solid fa-clock me-1"></i>In Driver Custody</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 text-end">
+                            {% if pay.cash_status == 'Submitted to Manager' %}
+                            <form method="POST" action="{{ url_for('branch.acknowledge_cash', payment_id=pay.id) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-success btn-sm fw-bold shadow-sm" onclick="return confirm('Acknowledge and receive ₹{{ pay.cash_collected_amount }} cash deposit from driver?');">
+                                    <i class="fa-solid fa-circle-check me-1"></i>Accept & Deposit Cash
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary border py-2 px-3 fw-semibold" title="Waiting for driver to click Submit to Manager">
+                                <i class="fa-solid fa-hourglass-half me-1 text-warning"></i>Awaiting Driver Submission
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Active Local Inventory & Dispatch Queue -->
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-primary"><i class="fa-solid fa-boxes-stacked me-2"></i>Active Terminal Inventory & Local Shipments</h5>
+        <a href="{{ url_for('branch.local_shipments') }}" class="btn btn-outline-primary btn-sm fw-bold">Manage All Runs</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Tracking ID</th>
+                        <th>Sender Name</th>
+                        <th>Final Destination</th>
+                        <th>Weight</th>
+                        <th>Payment</th>
+                        <th>Status</th>
+                        <th>Container Unit</th>
+                        <th class="pe-4 text-end">Dispatch Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if active_shipments %}
+                        {% for sh in active_shipments %}
+                        <tr>
+                            <td class="ps-4"><strong class="text-primary font-monospace">{{ sh.tracking_number }}</strong></td>
+                            <td>{{ sh.sender_name }}</td>
+                            <td>
+                                <span class="badge bg-light text-dark border">{{ sh.receiver_city }}</span>
+                            </td>
+                            <td>
+                                <span class="small">{{ sh.package_category }} ({{ sh.package_weight }} kg)</span>
+                            </td>
+                            <td>
+                                {% if sh.payment and sh.payment.payment_status == 'Completed' and sh.status not in ['Booked', 'Confirmed', 'Branch Assigned', 'Driver Assigned'] %}
+                                    <span class="badge bg-success text-white" title="Gross: ₹{{ sh.shipping_cost }} (Advance ₹{{ sh.advance_paid or 0 }} + Balance Settled)"><i class="fa-solid fa-check-circle me-1"></i>Paid ₹{{ sh.shipping_cost }}</span>
+                                {% elif sh.advance_paid and sh.advance_paid > 0 %}
+                                    <span class="badge bg-warning text-dark border" title="Online Advance Paid. Balance to be collected upon pickup weighing."><i class="fa-solid fa-clock me-1"></i>Adv ₹{{ sh.advance_paid }}</span>
+                                {% elif sh.payment and sh.payment.payment_status == 'Completed' %}
+                                    <span class="badge bg-success text-white"><i class="fa-solid fa-check-circle me-1"></i>Paid ₹{{ sh.shipping_cost }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary text-white">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge-status status-{{ sh.status.lower().replace(' ', '-') }}">
+                                    {{ sh.status }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if sh.active_container %}
+                                <a href="{{ url_for('branch.container_detail', container_id=sh.active_container.id) }}" class="badge bg-dark text-warning font-monospace text-decoration-none">
+                                    <i class="fa-solid fa-box-archive me-1"></i>{{ sh.active_container.transfer_code }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted small">Individual</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="d-flex justify-content-end gap-1">
+                                    {% if sh.status in ['Booked', 'Payment Pending'] %}
+                                        <a href="{{ url_for('branch.approve_shipment', id=sh.id) }}" class="btn btn-success btn-sm fw-bold"><i class="fa-solid fa-circle-check me-1"></i>Approve</a>
+                                    {% elif (sh.status in ['Confirmed', 'Branch Assigned'] or sh.status == 'Warehouse') and not sh.driver_id and not sh.active_container %}
+                                        {% if sh.status == 'Warehouse' and sh.receiver_city.strip().lower() != branch.city.strip().lower() %}
+                                            {% set matching_containers = [] %}
+                                            {% if preparing_containers %}
+                                                {% for c in preparing_containers %}
+                                                    {% if c.to_branch and (c.to_branch.city.strip().lower() in sh.receiver_city.strip().lower() or sh.receiver_city.strip().lower() in c.to_branch.city.strip().lower()) %}
+                                                        {% set _ = matching_containers.append(c) %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+
+                                            {% if matching_containers %}
+                                                <div class="btn-group">
+                                                    <form method="POST" action="{{ url_for('branch.direct_add_shipment_to_container', shipment_id=sh.id, container_id=matching_containers[0].id) }}" style="display: inline;">
+                                                        <button type="submit" class="btn btn-warning btn-sm fw-bold text-dark" title="Add directly to open {{ matching_containers[0].transfer_code }} ({{ matching_containers[0].to_branch.city }})">
+                                                            <i class="fa-solid fa-box-open me-1"></i>Add to {{ matching_containers[0].transfer_code }}
+                                                        </button>
+                                                    </form>
+                                                    <button type="button" class="btn btn-warning btn-sm dropdown-toggle dropdown-toggle-split text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <span class="visually-hidden">Toggle Dropdown</span>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                                                        <li><h6 class="dropdown-header">Add to Existing Open Container</h6></li>
+                                                        {% for c in preparing_containers %}
+                                                        <li>
+                                                            <form method="POST" action="{{ url_for('branch.direct_add_shipment_to_container', shipment_id=sh.id, container_id=c.id) }}">
+                                                                <button type="submit" class="dropdown-item small d-flex justify-content-between align-items-center">
+                                                                    <span><i class="fa-solid fa-truck-moving text-warning me-1"></i><b>{{ c.transfer_code }}</b> &rarr; {{ c.to_branch.city }}</span>
+                                                                    <span class="badge bg-secondary ms-2">{{ c.total_orders }}/{{ c.max_orders_capacity }}</span>
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                        {% endfor %}
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item small text-primary" href="{{ url_for('branch.create_container') }}">
+                                                                <i class="fa-solid fa-plus-circle me-1"></i>+ Prepare New Container
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            {% elif preparing_containers %}
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-warning btn-sm fw-bold text-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="fa-solid fa-truck-moving me-1"></i>Add to Container
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                                                        <li><h6 class="dropdown-header">Add to Existing Container</h6></li>
+                                                        {% for c in preparing_containers %}
+                                                        <li>
+                                                            <form method="POST" action="{{ url_for('branch.direct_add_shipment_to_container', shipment_id=sh.id, container_id=c.id) }}">
+                                                                <button type="submit" class="dropdown-item small d-flex justify-content-between align-items-center">
+                                                                    <span><i class="fa-solid fa-truck-moving text-warning me-1"></i><b>{{ c.transfer_code }}</b> &rarr; {{ c.to_branch.city }}</span>
+                                                                    <span class="badge bg-secondary ms-2">{{ c.total_orders }}/{{ c.max_orders_capacity }}</span>
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                        {% endfor %}
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item small text-primary" href="{{ url_for('branch.create_container') }}">
+                                                                <i class="fa-solid fa-plus-circle me-1"></i>+ Prepare New Container
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            {% else %}
+                                                <a href="{{ url_for('branch.create_container') }}" class="btn btn-warning btn-sm fw-bold text-dark"><i class="fa-solid fa-truck-moving me-1"></i>Add to Container</a>
+                                            {% endif %}
+                                        {% else %}
+                                            <a href="{{ url_for('branch.assign_driver', id=sh.id) }}" class="btn btn-primary btn-sm fw-bold"><i class="fa-solid fa-id-badge me-1"></i>Assign Local Driver</a>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if sh.driver %}
+                                        <span class="small fw-semibold text-success"><i class="fa-solid fa-id-badge me-1"></i>{{ sh.driver.user.username }}</span>
+                                        {% else %}
+                                        <span class="text-muted small">In Progress</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <p class="mb-0">No active shipments in this local terminal.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- RECENT DELIVERED SHIPMENTS (PROOF OF DELIVERY) -->
+<div class="card border-0 shadow-sm kpi-card mt-4 mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-success"><i class="fa-solid fa-clipboard-check me-2"></i>Recent Delivered Shipments (Proof of Delivery)</h5>
+        <span class="badge bg-success bg-opacity-10 text-success fw-bold">{{ recent_delivered|length }} Delivered</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Order / Tracking ID</th>
+                        <th>Receiver</th>
+                        <th>Delivered By (Driver)</th>
+                        <th>Delivered Timestamp</th>
+                        <th>Status</th>
+                        <th class="pe-4 text-end">Proof of Delivery</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if recent_delivered %}
+                        {% for sh in recent_delivered %}
+                        <tr>
+                            <td class="ps-4">
+                                <strong class="text-primary font-monospace">{{ sh.tracking_number }}</strong>
+                            </td>
+                            <td>
+                                <div>
+                                    <span class="fw-bold">{{ sh.receiver_name }}</span>
+                                    <small class="text-muted d-block" style="font-size: 0.72rem;">{{ sh.receiver_city }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                {% if sh.driver %}
+                                <span class="small fw-semibold text-success"><i class="fa-solid fa-id-badge me-1"></i>{{ sh.driver.user.username }}</span>
+                                {% else %}
+                                <span class="text-muted small">Assigned Courier</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="small fw-semibold">{{ sh.delivered_at.strftime('%d %b %Y, %I:%M %p') if sh.delivered_at else sh.updated_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+                            </td>
+                            <td>
+                                <span class="badge-status status-delivered">DELIVERED ✓</span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <button type="button" class="btn btn-outline-success btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#podModal_{{ sh.id }}">
+                                    <i class="fa-solid fa-shield-halved me-1"></i>View Proof
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted small">
+                                No recently delivered shipments recorded in this terminal.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- PROOF OF DELIVERY MODALS (PLACED OUTSIDE TABLE TO PREVENT CLIPPING / GLITCHING) -->
+{% if recent_delivered %}
+    {% for sh in recent_delivered %}
+    <div class="modal fade" id="podModal_{{ sh.id }}" tabindex="-1" aria-labelledby="podModalLabel_{{ sh.id }}" aria-hidden="true" style="z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header bg-dark text-white px-4 py-3">
+                    <h6 class="modal-title fw-bold" id="podModalLabel_{{ sh.id }}">
+                        <i class="fa-solid fa-shield-halved text-success me-2"></i>Proof of Delivery — <span class="font-monospace text-warning">{{ sh.tracking_number }}</span>
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-white">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="card p-3 h-100 bg-light border-0 shadow-none" style="border-radius: 12px;">
+                                <small class="text-muted fw-bold d-block mb-1">RECEIVER & DESTINATION</small>
+                                <h6 class="fw-bold text-primary mb-1">{{ sh.receiver_name }}</h6>
+                                <p class="small text-muted mb-1">{{ sh.receiver_address_line }}, {{ sh.receiver_city }}</p>
+                                <p class="small text-muted mb-0"><b>Phone:</b> {{ sh.receiver_phone }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card p-3 h-100 bg-light border-0 shadow-none" style="border-radius: 12px;">
+                                <small class="text-muted fw-bold d-block mb-1">DELIVERY METRICS</small>
+                                <p class="small mb-1"><b>Delivered At:</b> {{ sh.delivered_at.strftime('%d %b %Y, %I:%M %p') if sh.delivered_at else sh.updated_at.strftime('%d %b %Y, %I:%M %p') }}</p>
+                                <p class="small mb-1"><b>Delivered By:</b> {{ sh.driver.user.username if sh.driver else 'Courier' }}</p>
+                                <p class="small mb-0"><b>Email Notification:</b> <span class="badge bg-{{ 'success' if sh.delivery_email_status == 'Sent' else 'secondary' }}">{{ sh.delivery_email_status }}</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6 text-center">
+                            <div class="p-3 bg-light rounded border h-100 d-flex flex-column justify-content-between">
+                                <strong class="d-block mb-2 text-secondary small fw-bold"><i class="fa-solid fa-camera text-primary me-1"></i>Product Delivery Photo</strong>
+                                {% if sh.proof_image_path %}
+                                <a href="{{ url_for('static', filename=sh.proof_image_path) }}" target="_blank" title="Click to view full size">
+                                    <img src="{{ url_for('static', filename=sh.proof_image_path) }}" alt="Delivery Photo" class="img-fluid rounded border shadow-sm" style="max-height: 220px; width: 100%; object-fit: contain;">
+                                </a>
+                                <small class="text-muted d-block mt-2" style="font-size: 0.7rem;"><i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Open Full Image</small>
+                                {% else %}
+                                <div class="py-5 text-muted small"><i class="fa-solid fa-image fa-2x mb-2 d-block text-muted"></i>No Delivery Photo Recorded</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <div class="p-3 bg-light rounded border h-100 d-flex flex-column justify-content-between">
+                                <strong class="d-block mb-2 text-secondary small fw-bold"><i class="fa-solid fa-signature text-success me-1"></i>Receiver Digital Signature</strong>
+                                {% if sh.delivery_signature_path or sh.signature_path %}
+                                <img src="{{ url_for('static', filename=sh.delivery_signature_path or sh.signature_path) }}" alt="Receiver Signature" class="img-fluid rounded border shadow-sm bg-white p-2" style="max-height: 220px; width: 100%; object-fit: contain;">
+                                <small class="text-success fw-bold d-block mt-2" style="font-size: 0.75rem;"><i class="fa-solid fa-circle-check me-1"></i>Signed electronically by {{ sh.receiver_name }}</small>
+                                {% else %}
+                                <div class="py-5 text-muted small"><i class="fa-solid fa-signature fa-2x mb-2 d-block text-muted"></i>No Signature Recorded</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light px-4 py-3">
+                    <button type="button" class="btn btn-secondary btn-sm fw-bold px-3" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+
+{% endblock %}

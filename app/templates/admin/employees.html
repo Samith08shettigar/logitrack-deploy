@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Employees - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-users-gear me-2"></i>System Staff Accounts</h4>
+        <small class="text-muted">Manage system administrative privilege accounts and local branch manager roles.</small>
+    </div>
+    <a href="{{ url_for('admin.add_employee') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-user-plus me-1"></i>Add Staff</a>
+</div>
+
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Username</th>
+                        <th>Email Address</th>
+                        <th>Role Privilege</th>
+                        <th>Assigned Branch</th>
+                        <th>Status</th>
+                        <th>Date Registered</th>
+                        <th class="pe-4 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if employees %}
+                        {% for emp in employees %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                        <i class="fa-solid fa-user-tie small"></i>
+                                    </div>
+                                    <span>{{ emp.username }}</span>
+                                </div>
+                            </td>
+                            <td>{{ emp.email }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'primary' if emp.role.name == 'Administrator' else 'info' }}">
+                                    {{ emp.role.name }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if emp.role.name == 'Branch Manager' and emp.branch %}
+                                    <span class="text-secondary small fw-bold">
+                                        <i class="fa-solid fa-building-user me-1 text-primary"></i>{{ emp.branch.name }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted small">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill bg-{{ 'success' if emp.is_active else 'danger' }}">
+                                    {{ 'Active' if emp.is_active else 'Deactivated' }}
+                                </span>
+                            </td>
+                            <td class="small text-muted">{{ emp.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td class="pe-4 text-end">
+                                <a href="{{ url_for('admin.edit_employee', id=emp.id) }}" class="btn btn-outline-primary btn-sm me-1" title="Edit Privilege"><i class="fa-solid fa-pen-to-square"></i></a>
+                                {% if emp.id != current_user.id %}
+                                <a href="{{ url_for('admin.delete_employee', id=emp.id) }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this staff user account?')" title="Delete User"><i class="fa-solid fa-trash"></i></a>
+                                {% else %}
+                                <button class="btn btn-outline-secondary btn-sm" disabled title="Cannot delete yourself"><i class="fa-solid fa-ban"></i></button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-user-slash fa-2x mb-3 text-muted"></i>
+                                <p class="mb-0">No internal staff records found.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

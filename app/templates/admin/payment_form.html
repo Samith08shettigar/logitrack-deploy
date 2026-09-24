@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Verify Payment - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-primary text-white py-3" style="border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-file-invoice-dollar me-2 text-warning"></i>Audit Payment Status</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Shipment Tracking Number</label>
+                        <input type="text" class="form-control" value="{{ payment.shipment.tracking_number }}" disabled>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">Total Cost</label>
+                            <input type="text" class="form-control" value="₹{{ payment.shipment.shipping_cost }}" disabled>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">Advance Paid</label>
+                            <input type="text" class="form-control text-success fw-bold" value="₹{{ payment.shipment.advance_paid or 0.0 }}" disabled>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">Net Balance</label>
+                            <input type="text" class="form-control text-danger fw-bold" value="₹{{ [payment.shipment.shipping_cost - (payment.shipment.advance_paid or 0.0), 0]|max }}" disabled>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Payment Method</label>
+                        <input type="text" class="form-control" value="{{ payment.payment_method }}" disabled>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Payment Transaction Hash ID</label>
+                        <input type="text" name="transaction_id" class="form-control" value="{{ payment.transaction_id or '' }}" placeholder="Enter transaction ID or authorization number">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Payment Status</label>
+                        <select name="payment_status" class="form-select">
+                            <option value="Pending" {% if payment.payment_status == 'Pending' %}selected{% endif %}>Pending</option>
+                            <option value="Completed" {% if payment.payment_status == 'Completed' %}selected{% endif %}>Completed</option>
+                            <option value="Refunded" {% if payment.payment_status == 'Refunded' %}selected{% endif %}>Refunded</option>
+                            <option value="Cancelled" {% if payment.payment_status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-circle-check me-2"></i>Save Status</button>
+                        <a href="{{ url_for('admin.list_payments') }}" class="btn btn-outline-secondary w-50">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

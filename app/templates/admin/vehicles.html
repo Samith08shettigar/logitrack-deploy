@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Vehicles - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-truck-monster me-2"></i>Fleet Vehicles</h4>
+        <small class="text-muted">Manage company cargo vehicles, trucks, container availability, and maintenance logs.</small>
+    </div>
+    <a href="{{ url_for('admin.add_vehicle') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i>Add Vehicle</a>
+</div>
+
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Vehicle Number</th>
+                        <th>Type</th>
+                        <th>Weight Capacity</th>
+                        <th>Fuel Type</th>
+                        <th>Insurance Expiry</th>
+                        <th>Branch Hub</th>
+                        <th>Maintenance</th>
+                        <th>Availability</th>
+                        <th class="pe-4 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if vehicles %}
+                        {% for veh in vehicles %}
+                        <tr>
+                            <td class="ps-4 fw-bold"><code>{{ veh.vehicle_number }}</code></td>
+                            <td>
+                                <span class="d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-{{ 'truck' if 'truck' in veh.vehicle_type.lower() else ('car-side' if 'van' in veh.vehicle_type.lower() else 'motorcycle') }} text-primary"></i>
+                                    <span>{{ veh.vehicle_type }}</span>
+                                </span>
+                            </td>
+                            <td>{{ veh.capacity }} kg</td>
+                            <td><span class="badge bg-light text-dark border">{{ veh.fuel_type }}</span></td>
+                            <td>
+                                <span class="small {% if veh.insurance_expiry < datetime.now().date() %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                                    {{ veh.insurance_expiry.strftime('%Y-%m-%d') }}
+                                </span>
+                            </td>
+                            <td>{{ veh.branch.name if veh.branch else 'Unassigned' }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if veh.maintenance_status == 'Good' else ('warning' if veh.maintenance_status == 'Needs Service' else 'danger') }}">
+                                    {{ veh.maintenance_status }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if veh.availability == 'Available' else ('primary' if veh.availability == 'In Use' else 'secondary') }}">
+                                    {{ veh.availability }}
+                                </span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <a href="{{ url_for('admin.edit_vehicle', id=veh.id) }}" class="btn btn-outline-primary btn-sm me-1" title="Edit details"><i class="fa-solid fa-pen-to-square"></i></a>
+                                <a href="{{ url_for('admin.delete_vehicle', id=veh.id) }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this vehicle? Any assigned driver profile will have their vehicle unassigned.')" title="Delete Vehicle"><i class="fa-solid fa-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-truck-moving fa-2x mb-3 text-muted"></i>
+                                <p class="mb-0">No cargo vehicles registered in fleet.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

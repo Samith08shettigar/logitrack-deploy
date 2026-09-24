@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Locations - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-map-location-dot me-2"></i>My Saved Addresses</h4>
+        <small class="text-muted">Save your home, warehouse, office, or client addresses to book shipments faster.</small>
+    </div>
+    <a href="{{ url_for('customer.add_address') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i>Add Location</a>
+</div>
+
+<div class="row g-3">
+    {% if addresses %}
+        {% for addr in addresses %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm kpi-card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-primary">{{ addr.label }}</span>
+                    <a href="{{ url_for('customer.delete_address', id=addr.id) }}" class="text-danger" onclick="return confirm('Remove this saved address?')" title="Remove Address"><i class="fa-regular fa-trash-can"></i></a>
+                </div>
+                
+                <p class="mb-1 small text-dark"><b>Street:</b> {{ addr.address_line }}</p>
+                <p class="mb-1 small text-dark"><b>City/State:</b> {{ addr.city }}, {{ addr.state }} - {{ addr.zip_code }}</p>
+                <p class="mb-2 small text-dark"><b>Contact Phone:</b> {{ addr.phone }}</p>
+                
+                <div class="border-top pt-2 mt-2 d-flex gap-2">
+                    {% if addr.is_pickup %}
+                        <span class="badge bg-light text-success border"><i class="fa-solid fa-circle-arrow-up me-1"></i>Pickup</span>
+                    {% endif %}
+                    {% if addr.is_delivery %}
+                        <span class="badge bg-light text-info border"><i class="fa-solid fa-circle-arrow-down me-1"></i>Delivery</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else: %}
+        <div class="col-12">
+            <div class="card border-0 p-5 text-center text-muted">
+                <i class="fa-solid fa-map-location-dot fa-3x mb-3"></i>
+                <h5>No saved addresses.</h5>
+                <p class="small">Add your primary pickup addresses or receiver locations to speed up your booking process.</p>
+                <a href="{{ url_for('customer.add_address') }}" class="btn btn-primary btn-sm mt-2 mx-auto" style="width: 180px;">Add First Location</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} Shipment - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-primary text-white py-3" style="border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-boxes-packing me-2 text-warning"></i>{{ action }} Shipment Order</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" enctype="multipart/form-data">
+                    {% if action == "Add" %}
+                    <!-- Sender & Receiver Address Grid -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6 border-end">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-circle-user me-2"></i>Sender Information</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Sender Name</label>
+                                <input type="text" name="sender_name" class="form-control" placeholder="Full name" required>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">Sender Phone</label>
+                                    <input type="text" name="sender_phone" class="form-control" placeholder="Phone" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">Sender Email</label>
+                                    <input type="email" name="sender_email" class="form-control" placeholder="Email" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Pickup Street Address</label>
+                                <input type="text" name="pickup_address" class="form-control" placeholder="Pickup address line" required>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">City</label>
+                                    <input type="text" name="pickup_city" class="form-control" placeholder="City" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">State</label>
+                                    <input type="text" name="pickup_state" class="form-control" placeholder="State" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">Zip Code</label>
+                                    <input type="text" name="pickup_zip_code" class="form-control" placeholder="Zip" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-truck-ramp-box me-2"></i>Receiver Information</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Receiver Name</label>
+                                <input type="text" name="receiver_name" class="form-control" placeholder="Full name" required>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold">Receiver Phone</label>
+                                    <input type="text" name="receiver_phone" class="form-control" placeholder="Receiver contact phone" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Delivery Street Address</label>
+                                <input type="text" name="receiver_address" class="form-control" placeholder="Delivery street address" required>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">City</label>
+                                    <input type="text" name="receiver_city" class="form-control" placeholder="City" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">State</label>
+                                    <input type="text" name="receiver_state" class="form-control" placeholder="State" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">Zip Code</label>
+                                    <input type="text" name="receiver_zip_code" class="form-control" placeholder="Zip" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Package details grid -->
+                    <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-cubes me-2"></i>Cargo Dimensions & Delivery Details</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Package Category</label>
+                            <select name="package_category" id="admin-category" class="form-select">
+                                {% for cat_name, rate in get_packaging_categories() %}
+                                    <option value="{{ cat_name }}">{{ cat_name }}</option>
+                                {% endfor %}
+                                <option value="Other">Other</option>
+                            </select>
+                            <div id="custom-category-container" class="mt-2" style="display: none;">
+                                <input type="text" name="custom_category" id="custom-category" class="form-control form-control-sm" placeholder="Specify other type">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Package Weight (kg)</label>
+                            <input type="number" name="package_weight" id="admin-weight" class="form-control" value="1.0" min="0.1" step="0.1" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Product Image {% if action == "Add" %}<span class="text-danger">*</span>{% endif %}</label>
+                            <input type="file" name="package_image" class="form-control" accept="image/*" {% if action == "Add" %}required{% endif %}>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Delivery Priority</label>
+                            <select name="delivery_type" id="admin-type" class="form-select">
+                                <option value="Standard">Standard</option>
+                                <option value="Express">Express</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Package Description</label>
+                            <textarea name="package_description" class="form-control" rows="2" placeholder="Brief cargo description"></textarea>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center gap-4">
+                            <div class="form-check">
+                                <input type="checkbox" name="fragile" id="admin-fragile" class="form-check-input">
+                                <label class="form-check-label small fw-bold">Fragile Cargo Care</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" name="insurance" id="admin-insurance" class="form-check-input">
+                                <label class="form-check-label small fw-bold">Insured Shipment</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dispatch Assignments -->
+                    <h6 class="fw-bold text-primary mb-3 mt-4"><i class="fa-solid fa-route me-2"></i>Logistics Assigns</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Dispatch Branch Hub</label>
+                            <select name="branch_id" class="form-select">
+                                <option value="">-- No Branch Assigned --</option>
+                                {% for b in branches %}
+                                    <option value="{{ b.id }}">{{ b.name }} ({{ b.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Courier Driver Assignment</label>
+                            <select name="driver_id" class="form-select">
+                                <option value="">-- No Driver Assigned --</option>
+                                {% for d in drivers %}
+                                    <option value="{{ d.id }}">{{ d.user.username }} - {{ d.branch.name if d.branch else 'Free' }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="border-top pt-3 mb-4 text-center">
+                        <span class="text-muted small d-block">Automatic Calculated Cost</span>
+                        <h3 class="fw-bold text-success" id="admin-cost-result">₹25.50</h3>
+                    </div>
+                    
+                    {% else %}
+                    <!-- Edit Mode: Simple Transit Dispatch updates -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card p-3 border-0 bg-light">
+                                <h6 class="fw-bold text-primary mb-2">Shipment Metadata</h6>
+                                <p class="mb-1 small"><b>Tracking Number:</b> {{ shipment.tracking_number }}</p>
+                                <p class="mb-1 small"><b>Sender:</b> {{ shipment.sender_name }} ({{ shipment.sender_phone }})</p>
+                                <p class="mb-1 small"><b>Receiver:</b> {{ shipment.receiver_name }} ({{ shipment.receiver_phone }})</p>
+                                <p class="mb-1 small"><b>Package:</b> {{ shipment.package_weight }} kg | {{ shipment.package_category }}</p>
+                                <p class="mb-0 small"><b>Amount Due:</b> <span class="text-success fw-bold">₹{{ shipment.shipping_cost }}</span></p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card p-3 border-0 bg-light">
+                                <h6 class="fw-bold text-primary mb-2">Billing & QR Logs</h6>
+                                <div class="d-flex align-items-center gap-3">
+                                    {% if shipment.qr_code_path %}
+                                    <img src="{{ url_for('static', filename=shipment.qr_code_path) }}" alt="QR Code" style="width: 80px; height: 80px;" class="border rounded bg-white p-1">
+                                    {% endif %}
+                                    {% if shipment.barcode_path %}
+                                    <img src="{{ url_for('static', filename=shipment.barcode_path) }}" alt="Barcode" style="width: 140px; height: 50px;" class="border rounded bg-white p-1">
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-arrows-spin me-2"></i>Lifecycle Transition Controls</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Update Shipment Status</label>
+                            <select name="status" class="form-select">
+                                {% for st in ['Booked', 'Payment Pending', 'Confirmed', 'Branch Assigned', 'Driver Assigned', 'Picked Up', 'Warehouse', 'In Transit', 'Out For Delivery', 'Delivered', 'Completed', 'Cancelled', 'Returned', 'Failed Delivery'] %}
+                                    <option value="{{ st }}" {% if shipment.status == st %}selected{% endif %}>{{ st }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Current Scan Location (City/State)</label>
+                            <input type="text" name="current_location" class="form-control" value="{{ shipment.pickup_city }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Assigned Dispatch Branch</label>
+                            <select name="branch_id" class="form-select">
+                                <option value="">-- No Branch Assigned --</option>
+                                {% for b in branches %}
+                                    <option value="{{ b.id }}" {% if shipment.branch_id == b.id %}selected{% endif %}>{{ b.name }} ({{ b.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Assigned Courier Driver</label>
+                            <select name="driver_id" class="form-select">
+                                <option value="">-- No Driver Assigned --</option>
+                                {% for d in drivers %}
+                                    <option value="{{ d.id }}" {% if shipment.driver_id == d.id %}selected{% endif %}>{{ d.user.username }} ({{ d.branch.name if d.branch else 'Free' }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Checkpoint Update Notes</label>
+                        <input type="text" name="status_notes" class="form-control" placeholder="Update detail notes to show on tracking logs">
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-circle-check me-2"></i>Save Shipment</button>
+                        <a href="{{ url_for('admin.list_shipments') }}" class="btn btn-outline-secondary w-50">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if action == "Add" %}
+<script>
+    const adminWeight = document.getElementById('admin-weight');
+    const adminType = document.getElementById('admin-type');
+    const adminFragile = document.getElementById('admin-fragile');
+    const adminInsurance = document.getElementById('admin-insurance');
+    const adminCostResult = document.getElementById('admin-cost-result');
+    const adminCategory = document.getElementById('admin-category');
+    const customCategory = document.getElementById('custom-category');
+    
+    function calculateCostAdmin() {
+        const weight = parseFloat(adminWeight.value) || 0.1;
+        const delivery_type = adminType.value;
+        const fragile = adminFragile.checked;
+        const insurance = adminInsurance.checked;
+        const category = adminCategory.value === 'Other' ? customCategory.value : adminCategory.value;
+        const declared_val = 0.0;
+        
+        fetch('/shipment/calculate-cost', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                weight: weight,
+                delivery_type: delivery_type,
+                fragile: fragile,
+                insurance: insurance,
+                package_category: category,
+                declared_value: declared_val
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                adminCostResult.innerText = `₹${data.cost.toFixed(2)}`;
+            }
+        })
+        .catch(err => console.error("Error fetching price", err));
+    }
+    
+    adminCategory.addEventListener('change', () => {
+        const container = document.getElementById('custom-category-container');
+        if (adminCategory.value === 'Other') {
+            container.style.display = 'block';
+            customCategory.required = true;
+        } else {
+            container.style.display = 'none';
+            customCategory.required = false;
+            customCategory.value = '';
+        }
+        calculateCostAdmin();
+    });
+    customCategory.addEventListener('input', calculateCostAdmin);
+    adminInsurance.addEventListener('change', calculateCostAdmin);
+    
+    [adminWeight, adminType, adminFragile, adminInsurance].forEach(el => {
+        el.addEventListener('input', calculateCostAdmin);
+        el.addEventListener('change', calculateCostAdmin);
+    });
+    
+    calculateCostAdmin();
+</script>
+{% endif %}
+{% endblock %}

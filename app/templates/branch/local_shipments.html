@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Branch Orders - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-boxes-stacked me-2"></i>Branch Shipments Dispatch Queue</h4>
+        <small class="text-muted">Managed Terminal: <b>{{ branch.name }}</b>. Linehaul multi-shipment containers and local courier runs.</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('branch.branch_records') }}" class="btn btn-outline-primary btn-sm fw-bold">
+            <i class="fa-solid fa-clipboard-check me-1"></i>Branch Records Archive
+        </a>
+        <a href="{{ url_for('branch.create_container') }}" class="btn btn-warning btn-sm fw-bold text-dark shadow-sm">
+            <i class="fa-solid fa-truck-ramp-box me-1"></i>Prepare Multi-Shipment Container
+        </a>
+    </div>
+</div>
+
+<!-- Incoming Containers in Transit -->
+<div class="card border-0 shadow-sm kpi-card mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-success"><i class="fa-solid fa-truck-ramp-box me-2"></i>Incoming Containers (In-Transit to {{ branch.city }})</h5>
+        <span class="badge bg-success bg-opacity-10 text-success fw-bold">{{ incoming_containers|length }} Incoming</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Container ID</th>
+                        <th>Origin Hub</th>
+                        <th>Orders Inside</th>
+                        <th>Assigned Driver</th>
+                        <th>Status</th>
+                        <th class="pe-4 text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if incoming_containers %}
+                        {% for c in incoming_containers %}
+                        <tr>
+                            <td class="ps-4">
+                                <a href="{{ url_for('branch.container_detail', container_id=c.id) }}" class="fw-bold text-success font-monospace">
+                                    {{ c.transfer_code }}
+                                </a>
+                            </td>
+                            <td>{{ c.from_branch.name }}</td>
+                            <td><span class="badge bg-dark">{{ c.total_orders }} Orders</span></td>
+                            <td>
+                                {% if c.driver %}
+                                <span class="small fw-semibold"><i class="fa-solid fa-id-badge text-success me-1"></i>{{ c.driver.user.username }}</span>
+                                {% else %}
+                                <span class="text-muted small">No driver</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if c.status == 'Arrived at Branch' %}
+                                <span class="badge bg-success"><i class="fa-solid fa-check-circle me-1"></i>Arrived at Terminal</span>
+                                {% else %}
+                                <span class="badge-status status-in-transit">IN TRANSIT</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end">
+                                {% if c.status == 'Arrived at Branch' %}
+                                <a href="{{ url_for('branch.receive_container', container_id=c.id) }}" class="btn btn-success btn-sm fw-bold shadow-sm">
+                                    <i class="fa-solid fa-warehouse me-1"></i>Receive Entire Container
+                                </a>
+                                {% else %}
+                                <span class="text-muted small">In Highway Transit</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <p class="mb-0 small"><i class="fa-solid fa-road-circle-check me-2"></i>No incoming containers currently in transit to this branch.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Local inventory and dispatch queue -->
+<div class="card border-0 shadow-sm kpi-card">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h5 class="mb-0 fw-bold text-primary"><i class="fa-solid fa-boxes-stacked me-2"></i>Current Branch Shipment Inventory</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 custom-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Tracking Number</th>
+                        <th>Sender</th>
+                        <th>Final Destination</th>
+                        <th>Weight / Class</th>
+                        <th>Payment Status</th>
+                        <th>Container Unit</th>
+                        <th>Status</th>
+                        <th>Courier</th>
+                        <th class="pe-4 text-end">Dispatch Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if shipments %}
+                        {% for sh in shipments %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex flex-column">
+                                    <strong class="text-primary font-monospace">{{ sh.tracking_number }}</strong>
+                                    <small class="text-muted" style="font-size: 0.65rem;">{{ sh.created_at.strftime('%Y-%m-%d') }}</small>
+                                </div>
+                            </td>
+                            <td>{{ sh.sender_name }}</td>
+                            <td>
+                                <span class="badge bg-light text-dark border">{{ sh.receiver_city }}</span>
+                            </td>
+                            <td>
+                                <span class="small fw-semibold">{{ sh.package_category }}</span>
+                                <small class="text-muted d-block" style="font-size: 0.72rem;">{{ sh.package_weight }} kg</small>
+                            </td>
+                            <td>
+                                {% if sh.payment and sh.payment.payment_status == 'Completed' and sh.status not in ['Booked', 'Confirmed', 'Branch Assigned', 'Driver Assigned'] %}
+                                    <span class="badge bg-success text-white" title="Gross: ₹{{ sh.shipping_cost }} (Advance ₹{{ sh.advance_paid or 0 }} + Balance Settled)"><i class="fa-solid fa-check-circle me-1"></i>Paid ₹{{ sh.shipping_cost }}</span>
+                                {% elif sh.advance_paid and sh.advance_paid > 0 %}
+                                    <span class="badge bg-warning text-dark border" title="Online Advance Paid. Balance to be collected upon pickup weighing."><i class="fa-solid fa-clock me-1"></i>Adv Paid ₹{{ sh.advance_paid }}</span>
+                                {% elif sh.payment and sh.payment.payment_status == 'Completed' %}
+                                    <span class="badge bg-success text-white"><i class="fa-solid fa-check-circle me-1"></i>Paid ₹{{ sh.shipping_cost }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary text-white">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if sh.active_container %}
+                                <a href="{{ url_for('branch.container_detail', container_id=sh.active_container.id) }}" class="badge bg-dark text-warning font-monospace text-decoration-none">
+                                    <i class="fa-solid fa-box-archive me-1"></i>{{ sh.active_container.transfer_code }}
+                                </a>
+                                {% if sh.is_container_locked %}
+                                <span class="badge bg-danger text-white ms-1" style="font-size: 0.65rem;">LOCKED</span>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-muted small">None</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge-status status-{{ sh.status.lower().replace(' ', '-') }}">
+                                    {{ sh.status }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if sh.driver %}
+                                <span class="small fw-semibold text-success"><i class="fa-solid fa-id-badge me-1"></i>{{ sh.driver.user.username }}</span>
+                                {% else %}
+                                <span class="text-danger small"><i class="fa-solid fa-triangle-exclamation me-1"></i>Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="d-flex justify-content-end gap-1">
+                                    <a href="{{ url_for('customer.public_track', tracking_number=sh.tracking_number) }}" class="btn btn-outline-info btn-sm" title="Track Live"><i class="fa-solid fa-route"></i></a>
+                                    
+                                    {% if sh.status in ['Booked', 'Payment Pending'] %}
+                                        <a href="{{ url_for('branch.approve_shipment', id=sh.id) }}" class="btn btn-success btn-sm fw-bold"><i class="fa-solid fa-circle-check me-1"></i>Approve</a>
+                                    {% elif (sh.status in ['Confirmed', 'Branch Assigned'] or sh.status == 'Warehouse') and not sh.driver_id and not sh.active_container %}
+                                        {% if sh.status == 'Warehouse' and sh.receiver_city.strip().lower() != branch.city.strip().lower() %}
+                                            {% set matching_containers = [] %}
+                                            {% if open_containers %}
+                                                {% for c in open_containers %}
+                                                    {% if c.to_branch and (c.to_branch.city.strip().lower() in sh.receiver_city.strip().lower() or sh.receiver_city.strip().lower() in c.to_branch.city.strip().lower()) %}
+                                                        {% set _ = matching_containers.append(c) %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+
+                                            {% if matching_containers %}
+                                                <div class="btn-group">
+                                                    <form method="POST" action="{{ url_for('branch.direct_add_shipment_to_container', shipment_id=sh.id, container_id=matching_containers[0].id) }}" style="display: inline;">
+                                                        <button type="submit" class="btn btn-warning btn-sm fw-bold text-dark" title="Add directly to open {{ matching_containers[0].transfer_code }} ({{ matching_containers[0].to_branch.city }})">
+                                                            <i class="fa-solid fa-box-open me-1"></i>Add to {{ matching_containers[0].transfer_code }}
+                                                        </button>
+                                                    </form>
+                                                    <button type="button" class="btn btn-warning btn-sm dropdown-toggle dropdown-toggle-split text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <span class="visually-hidden">Toggle Dropdown</span>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                                                        <li><h6 class="dropdown-header">Add to Existing Open Container</h6></li>
+                                                        {% for c in open_containers %}
+                                                        <li>
+                                                            <form method="POST" action="{{ url_for('branch.direct_add_shipment_to_container', shipment_id=sh.id, container_id=c.id) }}">
+                                                                <button type="submit" class="dropdown-item small d-flex justify-content-between align-items-center">
+                                                                    <span><i class="fa-solid fa-truck-moving text-warning me-1"></i><b>{{ c.transfer_code }}</b> &rarr; {{ c.to_branch.city }}</span>
+                                                                    <span class="badge bg-secondary ms-2">{{ c.total_orders }}/{{ c.max_orders_capacity }}</span>
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                        {% endfor %}
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item small text-primary" href="{{ url_for('branch.create_container') }}">
+                                                                <i class="fa-solid fa-plus-circle me-1"></i>+ Prepare New Container
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            {% elif open_containers %}
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-warning btn-sm fw-bold text-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="fa-solid fa-truck-moving me-1"></i>Add to Container
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                                                        <li><h6 class="dropdown-header">Add to Existing Container</h6></li>
+                                                        {% for c in open_containers %}
+                                                        <li>
+                                                            <form method="POST" action="{{ url_for('branch.direct_add_shipment_to_container', shipment_id=sh.id, container_id=c.id) }}">
+                                                                <button type="submit" class="dropdown-item small d-flex justify-content-between align-items-center">
+                                                                    <span><i class="fa-solid fa-truck-moving text-warning me-1"></i><b>{{ c.transfer_code }}</b> &rarr; {{ c.to_branch.city }}</span>
+                                                                    <span class="badge bg-secondary ms-2">{{ c.total_orders }}/{{ c.max_orders_capacity }}</span>
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                        {% endfor %}
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item small text-primary" href="{{ url_for('branch.create_container') }}">
+                                                                <i class="fa-solid fa-plus-circle me-1"></i>+ Prepare New Container
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            {% else %}
+                                                <a href="{{ url_for('branch.create_container') }}" class="btn btn-warning btn-sm fw-bold text-dark"><i class="fa-solid fa-truck-moving me-1"></i>Add to Container</a>
+                                            {% endif %}
+                                        {% else %}
+                                            <a href="{{ url_for('branch.assign_driver', id=sh.id) }}" class="btn btn-primary btn-sm fw-bold"><i class="fa-solid fa-id-badge me-1"></i>Assign Delivery Driver</a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <p class="mb-0">No shipments registered in this local terminal registry.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

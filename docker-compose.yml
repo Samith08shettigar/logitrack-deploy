@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: logitrack_web
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_CONFIG=production
+      - SECRET_KEY=production_secret_key_logitrack_2026
+      # Uncomment DATABASE_URL to use the postgres container instead of default sqlite:
+      # - DATABASE_URL=postgresql://logitrack_user:logitrack_pass@db:5432/logitrack_db
+    restart: unless-stopped
+    volumes:
+      - ./app/static/uploads:/app/app/static/uploads
+
+  # Optional PostgreSQL container if needed:
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: logitrack_postgres
+  #   environment:
+  #     - POSTGRES_USER=logitrack_user
+  #     - POSTGRES_PASSWORD=logitrack_pass
+  #     - POSTGRES_DB=logitrack_db
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+# volumes:
+#   pgdata:

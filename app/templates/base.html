@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LogiTrack - Smart Logistics Management{% endblock %}</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-theme="light">
+
+    <!-- Global Toast Container for System Alerts -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="toast align-items-center text-white bg-{{ 'danger' if category == 'error' or category == 'danger' else ('warning' if category == 'warning' else 'success') }} border-0 show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="fa-solid fa-bell me-2"></i> {{ message }}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    {% if current_user %}
+    <!-- Dashboard Panel Layout -->
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="text-white text-decoration-none d-flex align-items-center">
+                    <i class="fa-solid fa-truck-ramp-box fa-lg me-2 text-warning"></i>
+                    <span class="fs-5 fw-bold">LogiTrack</span>
+                </a>
+            </div>
+            
+            <ul class="sidebar-menu mt-3">
+                {% if current_user.role.name == 'Administrator' %}
+                    <li class="sidebar-menu-item {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+                        <a href="{{ url_for('admin.dashboard') }}"><i class="fa-solid fa-chart-pie"></i>Overview</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'shipments' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('admin.list_shipments') }}"><i class="fa-solid fa-cubes"></i>Shipments</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'customers' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('admin.list_customers') }}"><i class="fa-solid fa-user-group"></i>Customers</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'drivers' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('admin.list_drivers') }}"><i class="fa-solid fa-id-badge"></i>Drivers</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'vehicles' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('admin.list_vehicles') }}"><i class="fa-solid fa-truck-monster"></i>Fleet Vehicles</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'branches' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('admin.list_branches') }}"><i class="fa-solid fa-warehouse"></i>Branches</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'employees' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('admin.list_employees') }}"><i class="fa-solid fa-users-gear"></i>Staff Manage</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'payments' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('admin.list_payments') }}"><i class="fa-solid fa-file-invoice-dollar"></i>Payments</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'feedback' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('admin.list_feedback') }}"><i class="fa-solid fa-comments"></i>Reviews</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'reports' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('reports.index') }}"><i class="fa-solid fa-chart-line"></i>Reports Panel</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'settings' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('admin.system_settings') }}"><i class="fa-solid fa-sliders"></i>System Config</a>
+                    </li>
+                {% elif current_user.role.name == 'Customer' %}
+                    <li class="sidebar-menu-item {% if request.endpoint == 'customer.dashboard' %}active{% endif %}">
+                        <a href="{{ url_for('customer.dashboard') }}"><i class="fa-solid fa-gauge-high"></i>Dashboard</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if request.endpoint == 'customer.book_shipment' %}active{% endif %}">
+                        <a href="{{ url_for('customer.book_shipment') }}"><i class="fa-solid fa-calendar-plus"></i>Book Shipment</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if request.endpoint == 'customer.public_track' %}active{% endif %}">
+                        <a href="{{ url_for('customer.public_track') }}"><i class="fa-solid fa-magnifying-glass-location"></i>Track Package</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if request.endpoint == 'customer.list_addresses' %}active{% endif %}">
+                        <a href="{{ url_for('customer.list_addresses') }}"><i class="fa-solid fa-map-location-dot"></i>Saved Addresses</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if request.endpoint == 'auth.profile' %}active{% endif %}">
+                        <a href="{{ url_for('auth.profile') }}"><i class="fa-solid fa-user-gear"></i>My Profile</a>
+                    </li>
+                {% elif current_user.role.name == 'Driver' %}
+                    <li class="sidebar-menu-item {% if request.endpoint == 'driver.dashboard' %}active{% endif %}">
+                        <a href="{{ url_for('driver.dashboard') }}"><i class="fa-solid fa-road-barrier"></i>Active Runs</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if request.endpoint == 'driver.history' %}active{% endif %}">
+                        <a href="{{ url_for('driver.history') }}"><i class="fa-solid fa-clock-rotate-left"></i>Run History</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if request.endpoint == 'auth.profile' %}active{% endif %}">
+                        <a href="{{ url_for('auth.profile') }}"><i class="fa-solid fa-user-check"></i>My Profile</a>
+                    </li>
+                {% elif current_user.role.name == 'Branch Manager' %}
+                    <li class="sidebar-menu-item {% if request.endpoint == 'branch.dashboard' %}active{% endif %}">
+                        <a href="{{ url_for('branch.dashboard') }}"><i class="fa-solid fa-industry"></i>Overview</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if request.endpoint == 'branch.local_shipments' %}active{% endif %}">
+                        <a href="{{ url_for('branch.local_shipments') }}"><i class="fa-solid fa-truck-loading"></i>Branch Orders</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if 'container' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('branch.list_containers') }}"><i class="fa-solid fa-boxes-packing"></i>Containers Hub</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if request.endpoint == 'branch.branch_records' %}active{% endif %}">
+                        <a href="{{ url_for('branch.branch_records') }}"><i class="fa-solid fa-clipboard-check"></i>Branch Records</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if request.endpoint == 'branch.list_employees' %}active{% endif %}">
+                        <a href="{{ url_for('branch.list_employees') }}"><i class="fa-solid fa-users"></i>Branch Driver list</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if request.endpoint == 'branch.reports' %}active{% endif %}">
+                        <a href="{{ url_for('branch.reports') }}"><i class="fa-solid fa-clipboard-list"></i>Branch Stats</a>
+                    </li>
+                    <li class="sidebar-menu-item {% if request.endpoint == 'auth.profile' %}active{% endif %}">
+                        <a href="{{ url_for('auth.profile') }}"><i class="fa-solid fa-circle-user"></i>My Profile</a>
+                    </li>
+                {% endif %}
+                
+                <li class="sidebar-menu-item mt-4 border-top border-secondary">
+                    <a href="{{ url_for('auth.logout') }}" class="text-danger"><i class="fa-solid fa-power-off text-danger"></i>Sign Out</a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Dashboard View Container -->
+        <main class="main-content">
+            <!-- Top Dashboard Navbar -->
+            <header class="top-navbar d-flex align-items-center justify-content-between">
+                <div>
+                    <h5 class="mb-0 fw-bold d-none d-sm-block">Welcome back, <span class="text-primary">{{ current_user.username }}</span></h5>
+                    <small class="text-muted d-none d-md-block">Role Privilege: <span class="badge bg-secondary">{{ current_user.role.name }}</span></small>
+                </div>
+                
+                <div class="d-flex align-items-center gap-3">
+                    <!-- Theme Toggle Switch -->
+                    <button class="btn btn-outline-secondary btn-sm" id="theme-toggle" title="Switch Theme">
+                        <i class="fa-solid fa-moon" id="theme-icon"></i>
+                    </button>
+                    
+                    <!-- Notifications Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-light position-relative btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-regular fa-bell"></i>
+                            {% if current_user.notifications and current_user.notifications|selectattr("is_read", "equalto", False)|list|length > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
+                            {% endif %}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end p-2" style="width: 280px; max-height: 350px; overflow-y: auto;">
+                            <li><h6 class="dropdown-header">System Notifications</h6></li>
+                            {% if current_user.notifications %}
+                                {% for notif in current_user.notifications|reverse %}
+                                    <li>
+                                        <div class="dropdown-item p-2 border-bottom {% if not notif.is_read %}bg-light{% endif %}">
+                                            <div class="d-flex justify-content-between">
+                                                <strong class="text-{{ notif.type or 'info' }} small">{{ notif.title }}</strong>
+                                                <small class="text-muted" style="font-size: 0.65rem;">{{ notif.created_at.strftime('%m-%d %H:%M') }}</small>
+                                            </div>
+                                            <p class="mb-0 text-wrap small text-secondary" style="font-size: 0.75rem;">{{ notif.message }}</p>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            {% else: %}
+                                <li><p class="dropdown-item text-center text-muted small py-3">No notifications</p></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    
+                    <!-- User Settings dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-circle-user me-1"></i> {{ current_user.username }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="fa-solid fa-gears me-2"></i>Account</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-arrow-right-from-bracket me-2"></i>Sign Out</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Inner Page Content block -->
+            <div class="container-fluid p-4">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    {% else %}
+    <!-- Public Header & Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center fw-bold" href="/">
+                <i class="fa-solid fa-truck-ramp-box fa-lg me-2 text-warning"></i> LogiTrack
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="dropdown" data-bs-target="#public-nav" aria-controls="public-nav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="public-nav">
+                <ul class="navbar-nav ms-auto gap-2">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="fa-solid fa-house me-1"></i> Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('customer.public_track') }}"><i class="fa-solid fa-magnifying-glass-location me-1"></i> Track Parcel</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-warning text-white btn-sm px-3 mt-1" href="{{ url_for('auth.login') }}"><i class="fa-solid fa-right-to-bracket me-1"></i> Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-warning btn-sm px-3 mt-1" href="{{ url_for('auth.register') }}"><i class="fa-solid fa-user-plus me-1"></i> Signup</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Public Main Container -->
+    <main class="flex-shrink-0">
+        {% block public_content %}{% endblock %}
+    </main>
+
+    <!-- Public Footer -->
+    <footer class="footer py-4 mt-auto">
+        <div class="container text-center">
+            <span class="small">&copy; 2026 LogiTrack Logistics Services Ltd. All Rights Reserved.</span>
+        </div>
+    </footer>
+    {% endif %}
+
+    <!-- Leaflet Maps JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Bootstrap 5 bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Theme Toggle Switch Script -->
+    <script>
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const bodyEl = document.body;
+        
+        // Load theme preferences
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        bodyEl.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+        
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = bodyEl.getAttribute('data-theme');
+                const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+                bodyEl.setAttribute('data-theme', nextTheme);
+                localStorage.setItem('theme', nextTheme);
+                updateThemeIcon(nextTheme);
+            });
+        }
+        
+        function updateThemeIcon(theme) {
+            if (!themeIcon) return;
+            if (theme === 'dark') {
+                themeIcon.className = 'fa-solid fa-sun';
+            } else {
+                themeIcon.className = 'fa-solid fa-moon';
+            }
+        }
+
+        // Initialize autohide for toasts
+        document.addEventListener('DOMContentLoaded', () => {
+            const toastElList = document.querySelectorAll('.toast');
+            toastElList.forEach(toastEl => {
+                const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 });
+                toast.show();
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

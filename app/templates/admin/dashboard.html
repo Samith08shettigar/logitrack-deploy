@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Overview - LogiTrack{% endblock %}
+
+{% block content %}
+<!-- Welcome Banner -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-primary text-white border-0 shadow-sm p-4" style="border-radius: 16px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%) !important;">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h3 class="fw-bold mb-1"><i class="fa-solid fa-square-poll-vertical text-warning me-2"></i>Administration Dashboard</h3>
+                    <p class="mb-0 text-white-50">LogiTrack Central Control Hub. Monitor system metrics, manage fleet drivers, review branches, and track revenue.</p>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <span class="fs-4 fw-bold text-warning">₹{{ monthly_revenue }}</span>
+                    <small class="d-block text-white-50">Gross Revenue Completed</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Grid Section -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ total_customers }}</h3>
+                    <small class="text-muted small">Total Customers</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-6 col-lg-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-success bg-opacity-10 text-success">
+                    <i class="fa-solid fa-id-card"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ total_drivers }}</h3>
+                    <small class="text-muted small">Active Drivers</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-6 col-lg-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fa-solid fa-box-open"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ total_shipments }}</h3>
+                    <small class="text-muted small">Total Shipments</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-6 col-lg-3">
+        <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="kpi-icon bg-danger bg-opacity-10 text-danger">
+                    <i class="fa-solid fa-truck-moving"></i>
+                </div>
+                <div>
+                    <h3 class="mb-0 fw-bold">{{ total_vehicles }}</h3>
+                    <small class="text-muted small">Fleet Vehicles</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Extra Status Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 bg-light p-3 d-flex align-items-center text-center">
+            <span class="fs-4 fw-bold text-info">{{ active_deliveries }}</span>
+            <small class="text-muted small">In-Transit Jobs</small>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 bg-light p-3 d-flex align-items-center text-center">
+            <span class="fs-4 fw-bold text-warning">{{ pending_deliveries }}</span>
+            <small class="text-muted small">Pending Bookings</small>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 bg-light p-3 d-flex align-items-center text-center">
+            <span class="fs-4 fw-bold text-success">{{ delivered_shipments }}</span>
+            <small class="text-muted small">Delivered Packages</small>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 bg-light p-3 d-flex align-items-center text-center">
+            <span class="fs-4 fw-bold text-danger">{{ cancelled_shipments }}</span>
+            <small class="text-muted small">Cancelled Orders</small>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm kpi-card p-4">
+            <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-chart-line me-2"></i>Monthly Revenue Analytics</h5>
+            <div style="height: 300px; position: relative;">
+                <canvas id="revenueChart"
+                        data-months='[{% for r in revenue_data %}"{{ r.month }}"{% if not loop.last %},{% endif %}{% endfor %}]'
+                        data-totals='[{% for r in revenue_data %}{{ r.total }}{% if not loop.last %},{% endif %}{% endfor %}]'></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm kpi-card p-4">
+            <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-chart-pie me-2"></i>Shipments by Status</h5>
+            <div style="height: 300px; position: relative;">
+                <canvas id="statusChart"
+                        data-labels='[{% for s in status_data %}"{{ s[0] }}"{% if not loop.last %},{% endif %}{% endfor %}]'
+                        data-counts='[{% for s in status_data %}{{ s[1] }}{% if not loop.last %},{% endif %}{% endfor %}]'></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Data Grid and Logs -->
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm kpi-card p-4 h-100">
+            <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-history me-2"></i>Recent System Activity Logs</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle custom-table">
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th>Detail</th>
+                            <th>IP Addr</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recent_activities %}
+                            {% for act in recent_activities %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ act.action }}</span></td>
+                                <td class="small">{{ act.details }}</td>
+                                <td class="small text-muted">{{ act.ip_address }}</td>
+                                <td class="small text-muted" style="font-size: 0.7rem;">{{ act.created_at.strftime('%m-%d %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted small">No logs available</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm kpi-card p-4 h-100">
+            <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Daily Booking Trend</h5>
+            <div style="height: 250px; position: relative;">
+                <canvas id="bookingsChart"
+                        data-dates='[{% for b in bookings_data %}"{{ b.date }}"{% if not loop.last %},{% endif %}{% endfor %}]'
+                        data-counts='[{% for b in bookings_data %}{{ b.count }}{% if not loop.last %},{% endif %}{% endfor %}]'></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- REVENUE CHART ---
+        const revEl = document.getElementById('revenueChart');
+        const revCtx = revEl.getContext('2d');
+        const months = JSON.parse(revEl.getAttribute('data-months') || '[]');
+        const revenueTotals = JSON.parse(revEl.getAttribute('data-totals') || '[]');
+        
+        new Chart(revCtx, {
+            type: 'line',
+            data: {
+                labels: months.length ? months : ['No Data'],
+                datasets: [{
+                    label: 'Gross Completed Revenue (₹)',
+                    data: revenueTotals.length ? revenueTotals : [0],
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // --- STATUS CHART ---
+        const statusEl = document.getElementById('statusChart');
+        const statusCtx = statusEl.getContext('2d');
+        const statusLabels = JSON.parse(statusEl.getAttribute('data-labels') || '[]');
+        const statusCounts = JSON.parse(statusEl.getAttribute('data-counts') || '[]');
+        
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels.length ? statusLabels : ['Empty'],
+                datasets: [{
+                    data: statusCounts.length ? statusCounts : [1],
+                    backgroundColor: [
+                        '#3b82f6', '#f59e0b', '#10b981', '#ec4899', 
+                        '#8b5cf6', '#06b6d4', '#64748b', '#ef4444'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+            }
+        });
+
+        // --- BOOKINGS CHART ---
+        const bookEl = document.getElementById('bookingsChart');
+        const bookCtx = bookEl.getContext('2d');
+        const bookingDates = JSON.parse(bookEl.getAttribute('data-dates') || '[]');
+        const bookingCounts = JSON.parse(bookEl.getAttribute('data-counts') || '[]');
+        
+        new Chart(bookCtx, {
+            type: 'bar',
+            data: {
+                labels: bookingDates.length ? bookingDates : ['No Data'],
+                datasets: [{
+                    label: 'Bookings Count',
+                    data: bookingCounts.length ? bookingCounts : [0],
+                    backgroundColor: '#f59e0b',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

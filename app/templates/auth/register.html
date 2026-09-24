@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block public_content %}
+<div class="auth-bg py-5">
+    <div class="container">
+        <div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+            <div class="col-md-5">
+                <div class="text-center text-white mb-4">
+                    <i class="fa-solid fa-truck-ramp-box fa-3x mb-3 text-warning"></i>
+                    <h2 class="fw-bold">Create Customer Account</h2>
+                    <p class="text-white-50">Join LogiTrack for instant package booking and real-time tracking</p>
+                </div>
+                
+                <div class="card border-0 glass-card">
+                    <div class="card-body p-4">
+                        <form method="POST" action="{{ url_for('auth.register') }}">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-user text-muted"></i></span>
+                                    <input type="text" name="username" class="form-control bg-light border-start-0" placeholder="Choose a username" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Email Address</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-envelope text-muted"></i></span>
+                                    <input type="email" name="email" class="form-control bg-light border-start-0" placeholder="Enter your email" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Phone Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-phone text-muted"></i></span>
+                                    <input type="text" name="phone" class="form-control bg-light border-start-0" placeholder="Enter phone number" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold">Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-key text-muted"></i></span>
+                                    <input type="password" name="password" class="form-control bg-light border-start-0" placeholder="Choose a strong password" required>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-warning w-100 py-2 fw-bold text-dark"><i class="fa-solid fa-user-plus me-2"></i>Register Account</button>
+                        </form>
+                        
+                        <div class="text-center mt-4 border-top pt-3">
+                            <span class="small text-muted">Already have an account? <a href="{{ url_for('auth.login') }}" class="fw-bold text-decoration-none text-primary">Login here</a></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

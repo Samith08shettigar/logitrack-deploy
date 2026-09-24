@@ -1,0 +1,106 @@
+<div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 custom-table">
+        <thead>
+            <tr>
+                <th class="ps-4">Tracking ID</th>
+                <th>Sender / Origin</th>
+                <th>Receiver / Destination</th>
+                <th>Cargo / Weight</th>
+                <th>Payment</th>
+                <th>Current Status</th>
+                <th>Container Unit</th>
+                <th>Timeline Timestamp</th>
+                <th class="pe-4 text-end">Record Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if record_list %}
+                {% for sh in record_list %}
+                <tr>
+                    <td class="ps-4">
+                        <div class="d-flex flex-column">
+                            <a href="{{ url_for('customer.public_track', tracking_number=sh.tracking_number) }}" class="fw-bold text-primary font-monospace text-decoration-none">
+                                {{ sh.tracking_number }}
+                            </a>
+                            <small class="text-muted" style="font-size: 0.68rem;">{{ sh.created_at.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <span class="fw-semibold">{{ sh.sender_name }}</span>
+                            <small class="text-muted d-block" style="font-size: 0.72rem;"><i class="fa-solid fa-location-arrow me-1 text-primary"></i>{{ sh.pickup_city }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <span class="fw-semibold">{{ sh.receiver_name }}</span>
+                            <small class="text-muted d-block" style="font-size: 0.72rem;"><i class="fa-solid fa-location-dot me-1 text-danger"></i>{{ sh.receiver_city }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="small fw-semibold">{{ sh.package_category }}</span>
+                        <small class="text-muted d-block" style="font-size: 0.72rem;">{{ sh.package_weight }} kg ({{ sh.delivery_type }})</small>
+                    </td>
+                    <td>
+                        {% if sh.payment and sh.payment.payment_status == 'Completed' and sh.status not in ['Booked', 'Confirmed', 'Branch Assigned', 'Driver Assigned'] %}
+                            <span class="badge bg-success text-white" title="Gross: ₹{{ sh.shipping_cost }} (Advance ₹{{ sh.advance_paid or 0 }} + Balance Settled)"><i class="fa-solid fa-check-circle me-1"></i>Paid ₹{{ sh.shipping_cost }}</span>
+                        {% elif sh.advance_paid and sh.advance_paid > 0 %}
+                            <span class="badge bg-warning text-dark border" title="Online Advance Paid. Balance to be collected upon pickup weighing."><i class="fa-solid fa-clock me-1"></i>Adv ₹{{ sh.advance_paid }}</span>
+                        {% elif sh.payment and sh.payment.payment_status == 'Completed' %}
+                            <span class="badge bg-success text-white"><i class="fa-solid fa-check-circle me-1"></i>Paid ₹{{ sh.shipping_cost }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary text-white">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge-status status-{{ sh.status.lower().replace(' ', '-') }}">
+                            {{ sh.status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if sh.active_container %}
+                        <a href="{{ url_for('branch.container_detail', container_id=sh.active_container.id) }}" class="badge bg-dark text-warning font-monospace text-decoration-none">
+                            <i class="fa-solid fa-box-archive me-1"></i>{{ sh.active_container.transfer_code }}
+                        </a>
+                        {% elif sh.current_container_id %}
+                        <span class="badge bg-light text-dark border font-monospace">
+                            <i class="fa-solid fa-box-archive me-1 text-muted"></i>{{ sh.current_container_id }}
+                        </span>
+                        {% else %}
+                        <span class="text-muted small">Direct / Individual</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="small fw-semibold">
+                            {% if sh.status in ['Delivered', 'Completed'] and sh.delivered_at %}
+                                <i class="fa-solid fa-circle-check text-success me-1"></i>{{ sh.delivered_at.strftime('%d %b %Y, %I:%M %p') }}
+                            {% else %}
+                                {{ sh.updated_at.strftime('%d %b %Y, %I:%M %p') }}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td class="pe-4 text-end">
+                        <div class="d-flex justify-content-end gap-1">
+                            {% if sh.status in ['Delivered', 'Completed'] %}
+                                <button type="button" class="btn btn-outline-success btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#recordPodModal_{{ sh.id }}">
+                                    <i class="fa-solid fa-shield-halved me-1"></i>Proof
+                                </button>
+                            {% endif %}
+                            <a href="{{ url_for('customer.public_track', tracking_number=sh.tracking_number) }}" class="btn btn-outline-primary btn-sm" title="Live Tracking">
+                                <i class="fa-solid fa-route"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-folder-open fa-2x mb-2 text-muted"></i>
+                        <p class="mb-0 small">No shipment records found in this category for {{ branch.name }}.</p>
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>

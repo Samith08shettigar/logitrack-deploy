@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Reports Panel - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h4 class="fw-bold text-primary"><i class="fa-solid fa-chart-line me-2"></i>Global Business Reports Panel</h4>
+        <small class="text-muted">Generate reports, audit revenue collections, check fleet vehicle availability, and download exports.</small>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Reports Selector -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm kpi-card p-4">
+            <h5 class="fw-bold text-primary mb-4"><i class="fa-solid fa-file-invoice me-2"></i>Generate a Report</h5>
+            
+            <form action="{{ url_for('reports.view_report') }}" method="GET">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Select Report Category</label>
+                    <select name="type" class="form-select" required>
+                        <option value="shipments">Daily / Weekly / Monthly Shipments</option>
+                        <option value="revenue">Financial Revenue Transactions</option>
+                        <option value="drivers">Driver Performance & Rating Analysis</option>
+                        <option value="customers">Customer Activity & Loyalty Points</option>
+                        <option value="branches">Branch Performance Summary</option>
+                        <option value="vehicles">Vehicle Fleet Usage & Availability</option>
+                        <option value="success_rate">Delivery Success / Cancellation Rate</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Select Filter Timeframe</label>
+                    <select name="timeframe" class="form-select" required>
+                        <option value="daily">Daily Checkpoints (Last 24 hours)</option>
+                        <option value="weekly">Weekly Checkpoints (Last 7 days)</option>
+                        <option value="monthly" selected>Monthly Checkpoints (Last 30 days)</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold"><i class="fa-solid fa-desktop me-2"></i>Generate & Display Report</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Quick Exports -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm kpi-card p-4 h-100">
+            <h5 class="fw-bold text-primary mb-4"><i class="fa-solid fa-download me-2"></i>Quick File Downloads</h5>
+            <p class="text-muted small">Select a category and format to directly download complete logs from our database server.</p>
+            
+            <form action="{{ url_for('reports.export_report_file') }}" method="GET">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Select Data Category</label>
+                    <select name="type" class="form-select" required>
+                        <option value="shipments">Shipment Orders Database</option>
+                        <option value="revenue">Completed Revenue Payments</option>
+                        <option value="drivers">Driver Performance Ratings</option>
+                        <option value="customers">Customer Accounts Activity</option>
+                        <option value="branches">Branch Hub Summaries</option>
+                        <option value="vehicles">Vehicle Fleet List</option>
+                        <option value="success_rate">Delivery Success Rates</option>
+                    </select>
+                </div>
+                
+                <div class="row g-2 mb-4">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Timeframe</label>
+                        <select name="timeframe" class="form-select">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly" selected>Monthly</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">File Format</label>
+                        <select name="format" class="form-select" required>
+                            <option value="pdf">Adobe PDF Format</option>
+                            <option value="excel">Microsoft Excel (.xlsx)</option>
+                            <option value="csv">Standard CSV Text (.csv)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-success w-100 py-2 fw-bold"><i class="fa-solid fa-file-arrow-down me-2"></i>Download Document</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

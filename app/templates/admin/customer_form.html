@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} Customer - LogiTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mx-auto">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-header bg-primary text-white py-3" style="border-radius: 12px 12px 0 0;">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-user-plus me-2 text-warning"></i>{{ action }} Customer Account</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    {% if action == "Add" %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Username</label>
+                        <input type="text" name="username" class="form-control" placeholder="Enter username" required>
+                    </div>
+                    {% else %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Username</label>
+                        <input type="text" class="form-control" value="{{ customer.user.username }}" disabled>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email Address</label>
+                        <input type="email" name="email" class="form-control" value="{{ customer.user.email if customer else '' }}" placeholder="Enter email" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Phone Number</label>
+                        <input type="text" name="phone" class="form-control" value="{{ customer.phone if customer else '' }}" placeholder="Enter phone" required>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Account Status</label>
+                            <select name="status" class="form-select">
+                                <option value="Active" {% if customer and customer.status == 'Active' %}selected{% endif %}>Active</option>
+                                <option value="Suspended" {% if customer and customer.status == 'Suspended' %}selected{% endif %}>Suspended</option>
+                            </select>
+                        </div>
+                        {% if action == "Edit" %}
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Loyalty Points</label>
+                            <input type="number" name="loyalty_points" class="form-control" value="{{ customer.loyalty_points }}" min="0">
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">{% if action == "Edit" %}Update Password (Leave blank to keep current){% else %}Account Password{% endif %}</label>
+                        <input type="password" name="password" class="form-control" placeholder="Enter password" {% if action == "Add" %}required{% endif %}>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-circle-check me-2"></i>Save Customer</button>
+                        <a href="{{ url_for('admin.list_customers') }}" class="btn btn-outline-secondary w-50">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
