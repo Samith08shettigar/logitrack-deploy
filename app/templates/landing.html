@@ -219,14 +219,14 @@
         let activeIntervals = [];
 
         const closeSplash = () => {
-            if (splashScreen) {
+            if (splashScreen && !splashScreen.classList.contains('fade-out')) {
                 splashScreen.classList.add('fade-out');
                 document.body.classList.remove('splash-active');
                 document.body.style.overflow = '';
                 document.body.style.overflowY = 'auto';
                 setTimeout(() => {
                     splashScreen.classList.add('hidden');
-                }, 600);
+                }, 400);
             }
         };
 
@@ -263,13 +263,13 @@
             activeIntervals.forEach(id => clearTimeout(id));
             activeIntervals = [];
 
-            // Elegant progression text
+            // Snappy progression text (1.6s total)
             const taglines = [
                 { time: 0, text: "Initializing LogiTrack Systems..." },
-                { time: 800, text: "Constructing cargo routing grid..." },
-                { time: 1600, text: "Connecting warehouse nodes..." },
-                { time: 2400, text: "Securing logistics database..." },
-                { time: 3000, text: "Systems Active. Welcome to LogiTrack!" }
+                { time: 400, text: "Constructing cargo routing grid..." },
+                { time: 800, text: "Connecting warehouse nodes..." },
+                { time: 1200, text: "Securing logistics database..." },
+                { time: 1500, text: "Systems Active. Welcome to LogiTrack!" }
             ];
 
             taglines.forEach(item => {
@@ -279,24 +279,31 @@
                         setTimeout(() => {
                             statusText.innerText = item.text;
                             statusText.style.opacity = 1;
-                        }, 100);
+                        }, 80);
                     }
                 }, item.time);
                 activeIntervals.push(tid);
             });
 
-            activeTimeout = setTimeout(closeSplash, 3600);
+            activeTimeout = setTimeout(closeSplash, 1800);
         };
 
-        // Initialize on page load unconditionally (plays on every refresh)
+        // Initialize on page load (tap anywhere to instantly dismiss)
         if (splashScreen) {
-            splashScreen.classList.remove('hidden');
             runSplashSequence();
+
+            // Allow tapping anywhere on the splash screen to skip immediately
+            splashScreen.addEventListener('click', (e) => {
+                if (activeTimeout) clearTimeout(activeTimeout);
+                activeIntervals.forEach(id => clearTimeout(id));
+                closeSplash();
+            });
         }
 
         // Hook up skip button
         if (skipBtn) {
-            skipBtn.addEventListener('click', () => {
+            skipBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 if (activeTimeout) clearTimeout(activeTimeout);
                 activeIntervals.forEach(id => clearTimeout(id));
                 closeSplash();
