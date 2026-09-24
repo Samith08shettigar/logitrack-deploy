@@ -10,8 +10,8 @@ def login():
         return redirect_dashboard(g.user.role.name)
         
     if request.method == 'POST':
-        username_or_email = request.form.get('username')
-        password = request.form.get('password')
+        username_or_email = (request.form.get('username') or '').strip()
+        password = request.form.get('password') or ''
         
         # Support login by username or email (case-insensitive)
         user = User.query.filter(
@@ -29,9 +29,12 @@ def login():
             session['username'] = user.username
             session['role'] = user.role.name
             
-            # Log activity
-            log_activity(user.id, "Login", "User logged in successfully", request.remote_addr)
-            
+            # Log activity safely
+            try:
+                log_activity(user.id, "Login", "User logged in successfully", request.remote_addr)
+            except Exception:
+                pass
+                
             # Redirect to specific dashboard
             return redirect_dashboard(user.role.name)
         else:
@@ -45,47 +48,61 @@ def register():
         return redirect_dashboard(g.user.role.name)
         
     if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        phone = request.form.get('phone')
+        username = (request.form.get('username') or '').strip()
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
+        phone = (request.form.get('phone') or '').strip()
         
         # Validation checks
         if not username or not email or not password or not phone:
             flash("All fields are required.", "warning")
             return render_template('auth/register.html')
             
-        existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
+        existing_user = User.query.filter(
+            (db.func.lower(User.username) == db.func.lower(username)) | 
+            (db.func.lower(User.email) == db.func.lower(email))
+        ).first()
         if existing_user:
-            flash("Username or email already exists.", "warning")
+            flash("Username or email already exists. Please choose another or login.", "warning")
             return render_template('auth/register.html')
             
-        # Get Customer Role
+        # Ensure Customer Role exists
         cust_role = Role.query.filter_by(name='Customer').first()
         if not cust_role:
-            flash("Customer role not found in system. Please run DB seed.", "danger")
-            return render_template('auth/register.html')
+            cust_role = Role(name='Customer', description='End customer booking shipments')
+            db.session.add(cust_role)
+            db.session.commit()
             
         try:
             # Create user
-            new_user = User(username=username, email=email, role_id=cust_role.id)
+            new_user = User(username=username, email=email, role_id=cust_role.id, is_active=True)
             new_user.set_password(password)
             db.session.add(new_user)
-            db.session.commit() # commit to get new_user.id
+            db.session.flush() # Commit id to new_user
             
             # Create customer profile
             cust_profile = Customer(user_id=new_user.id, phone=phone, status='Active')
             db.session.add(cust_profile)
-            
-            # Log action
-            log_activity(new_user.id, "Register", "Customer registered account", request.remote_addr)
-            create_notification(new_user.id, "Welcome!", "Account created successfully. Welcome to LogiTrack!", "success")
-            
             db.session.commit()
-            flash("Registration successful! Please log in.", "success")
-            return redirect(url_for('auth.login'))
+            
+            # Log action & notification safely
+            try:
+                log_activity(new_user.id, "Register", "Customer registered account", request.remote_addr)
+                create_notification(new_user.id, "Welcome to LogiTrack!", "Account created successfully. Welcome to LogiTrack!", "success")
+            except Exception:
+                pass
+                
+            # Log user into session directly
+            session.clear()
+            session['user_id'] = new_user.id
+            session['username'] = new_user.username
+            session['role'] = 'Customer'
+            
+            flash(f"Welcome, {new_user.username}! Your account has been registered successfully.", "success")
+            return redirect(url_for('customer.dashboard'))
         except Exception as e:
             db.session.rollback()
+            print(f"[Register Error] {e}")
             flash("An error occurred during registration. Please try again.", "danger")
             
     return render_template('auth/register.html')
