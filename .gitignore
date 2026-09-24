@@ -43,10 +43,9 @@ Thumbs.db
 .gemini/
 
 # Database Files
-*.db
 *.sqlite
 *.sqlite3
-app/*.db
+!app/logitrack.db
 
 # Reports & scratch files
 Logi_Track-reports/
