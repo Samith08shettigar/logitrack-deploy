@@ -1,22 +1,46 @@
 import os
 
+def format_database_url(url: str) -> str:
+    """
+    Ensures the database connection URL is formatted properly for SQLAlchemy 2.0+ and psycopg2.
+    Render and other cloud providers often provide URLs starting with 'postgres://',
+    which must be normalized to 'postgresql://'.
+    """
+    if not url:
+        return url
+    url = url.strip()
+    if url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql://', 1)
+    return url
+
+def mask_database_url(url: str) -> str:
+    """
+    Safely masks database credentials for logging without exposing passwords.
+    """
+    if not url:
+        return "None"
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        if parsed.password:
+            netloc = parsed.netloc.replace(f":{parsed.password}@", ":****@")
+            return f"{parsed.scheme}://{netloc}{parsed.path}"
+        return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+    except Exception:
+        return "[MASKED_DATABASE_URL]"
+
 class Config:
     # Basic Flask Settings
     SECRET_KEY = os.environ.get('SECRET_KEY', 'logitrack_super_secret_key_129847320')
     DEBUG = False
     TESTING = False
 
-    # Database Configuration
-    # Supports SQLite (default), PostgreSQL (Render/Railway), and MySQL
-    # Render and Railway PostgreSQL URLs often start with 'postgres://' which SQLAlchemy 2.0+ requires as 'postgresql://'
-    _raw_db_url = os.environ.get('DATABASE_URL')
-    if _raw_db_url and _raw_db_url.startswith('postgres://'):
-        _raw_db_url = _raw_db_url.replace('postgres://', 'postgresql://', 1)
-
-    SQLALCHEMY_DATABASE_URI = _raw_db_url or (
-        'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'logitrack.db')
-    )
+    # Database Configuration Base
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
 
     # Session Management
     SESSION_TYPE = 'filesystem'
@@ -24,7 +48,7 @@ class Config:
     SESSION_USE_SIGNER = True
 
     # Security Settings
-    SESSION_COOKIE_SECURE = False  # Controlled via environment or ProductionConfig
+    SESSION_COOKIE_SECURE = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
 
@@ -43,6 +67,11 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    raw_url = os.environ.get('DATABASE_URL')
+    if raw_url:
+        SQLALCHEMY_DATABASE_URI = format_database_url(raw_url)
+    else:
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'logitrack.db')
 
 class TestingConfig(Config):
     TESTING = True
@@ -51,6 +80,14 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     # Enable secure session cookies when running behind HTTPS in production
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() in ['true', '1']
+    
+    raw_url = os.environ.get('DATABASE_URL')
+    if raw_url:
+        SQLALCHEMY_DATABASE_URI = format_database_url(raw_url)
+    else:
+        # Check if local fallback is explicitly allowed or if we should alert the admin
+        # Fallback to local SQLite only with a clear critical warning if DATABASE_URL was omitted on Render
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'logitrack.db')
 
 config_by_name = {
     'development': DevelopmentConfig,

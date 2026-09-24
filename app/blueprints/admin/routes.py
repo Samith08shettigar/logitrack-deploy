@@ -29,23 +29,37 @@ def dashboard():
     revenue_sum = db.session.query(func.sum(Payment.amount)).filter(Payment.payment_status == 'Completed').scalar() or 0.0
     
     # 2. Charts Data
-    # Monthly Revenue (Last 6 Months)
-    revenue_data = db.session.query(
-        func.strftime('%Y-%m', Payment.created_at).label('month'),
-        func.sum(Payment.amount).label('total')
-    ).filter(Payment.payment_status == 'Completed').group_by('month').order_by('month').all()
-    
-    # Shipments by Status
-    status_data = db.session.query(
-        Shipment.status,
-        func.count(Shipment.id)
-    ).group_by(Shipment.status).all()
-    
-    # Daily Bookings (Last 7 Days)
-    bookings_data = db.session.query(
-        func.date(Shipment.created_at).label('date'),
-        func.count(Shipment.id).label('count')
-    ).group_by('date').order_by('date').limit(7).all()
+    # Monthly Revenue (Last 6 Months) - Dialect-safe for PostgreSQL & SQLite
+    try:
+        is_postgres = (db.engine.dialect.name == 'postgresql')
+        if is_postgres:
+            month_expr = func.to_char(Payment.created_at, 'YYYY-MM').label('month')
+            date_expr = func.cast(Shipment.created_at, db.Date).label('date')
+        else:
+            month_expr = func.strftime('%Y-%m', Payment.created_at).label('month')
+            date_expr = func.date(Shipment.created_at).label('date')
+
+        revenue_data = db.session.query(
+            month_expr,
+            func.sum(Payment.amount).label('total')
+        ).filter(Payment.payment_status == 'Completed').group_by(month_expr).order_by(month_expr).all()
+        
+        # Shipments by Status
+        status_data = db.session.query(
+            Shipment.status,
+            func.count(Shipment.id)
+        ).group_by(Shipment.status).all()
+        
+        # Daily Bookings (Last 7 Days)
+        bookings_data = db.session.query(
+            date_expr,
+            func.count(Shipment.id).label('count')
+        ).group_by(date_expr).order_by(date_expr).limit(7).all()
+    except Exception as chart_err:
+        print(f"[Admin Dashboard Charts Error] {chart_err}")
+        revenue_data = []
+        status_data = []
+        bookings_data = []
     
     # Recent Activities
     recent_activities = ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(8).all()

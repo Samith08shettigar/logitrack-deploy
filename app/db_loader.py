@@ -8,6 +8,61 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from sqlalchemy import text
 from app.models import db
 
+def sync_postgresql_sequences():
+    """
+    Synchronizes PostgreSQL primary key sequences with the maximum existing ID
+    for each table. This prevents duplicate key constraint violations when inserting
+    new records after migrating or restoring seed data.
+    """
+    if db.engine.dialect.name != 'postgresql':
+        return
+
+    tables = [
+        'roles',
+        'branches',
+        'settings',
+        'users',
+        'vehicles',
+        'customers',
+        'drivers',
+        'addresses',
+        'shipments',
+        'container_transfers',
+        'shipment_history',
+        'tracking',
+        'payments',
+        'invoices',
+        'feedback',
+        'notifications',
+        'activity_logs'
+    ]
+
+    with db.engine.connect() as conn:
+        for table in tables:
+            try:
+                sql = text(f"""
+                    DO $$
+                    DECLARE
+                        seq_name text;
+                        max_id bigint;
+                    BEGIN
+                        seq_name := pg_get_serial_sequence('{table}', 'id');
+                        IF seq_name IS NOT NULL THEN
+                            EXECUTE 'SELECT COALESCE(MAX(id), 0) FROM {table}' INTO max_id;
+                            IF max_id > 0 THEN
+                                PERFORM setval(seq_name, max_id, true);
+                            ELSE
+                                PERFORM setval(seq_name, 1, false);
+                            END IF;
+                        END IF;
+                    END $$;
+                """)
+                conn.execute(sql)
+                conn.commit()
+            except Exception as e:
+                pass
+    print("[LogiTrack] PostgreSQL sequences synchronized successfully.")
+
 def load_initial_database_if_empty():
     """
     Checks if the current active database has users.
@@ -18,16 +73,18 @@ def load_initial_database_if_empty():
     source_db = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'logitrack.db')
     if not os.path.exists(source_db):
         print("[LogiTrack] Source logitrack.db not found, skipping sync.")
+        sync_postgresql_sequences()
         return
 
     # Check if target database already has users
     try:
         from app.models import User
         if User.query.count() >= 20:
-            print("[LogiTrack] Database is already fully populated.")
+            print("[LogiTrack] Database is already populated. Synchronizing sequences...")
+            sync_postgresql_sequences()
             return
     except Exception as e:
-        print(f"[LogiTrack] Checking User table: {e}")
+        print(f"[LogiTrack] Checking User table note: {e}")
 
     print(f"[LogiTrack] Populating database from {source_db}...")
     src_conn = sqlite3.connect(source_db)
@@ -88,6 +145,9 @@ def load_initial_database_if_empty():
 
     src_conn.close()
     print("[LogiTrack] Database population from logitrack.db completed successfully!")
+    
+    # Synchronize sequences after loading
+    sync_postgresql_sequences()
 
 if __name__ == '__main__':
     from app import create_app
@@ -95,3 +155,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         load_initial_database_if_empty()
+
