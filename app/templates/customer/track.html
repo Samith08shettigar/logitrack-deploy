@@ -96,6 +96,12 @@
         box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
         overflow: hidden;
     }
+
+    .route-sidebar-cities-row {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
     
     .route-location-block {
         display: flex;
@@ -108,17 +114,17 @@
         color: #94a3b8;
     }
     .route-city-name {
-        font-size: 1.4rem;
+        font-size: 1.3rem;
         font-weight: 700;
         color: #0f172a;
         margin: 2px 0 0 0;
     }
     .city-img {
         width: 100%;
-        height: 115px;
+        height: 110px;
         object-fit: cover;
-        border-radius: 16px;
-        margin-top: 8px;
+        border-radius: 14px;
+        margin-top: 6px;
         border: 1px solid #f1f5f9;
         box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
     }
@@ -138,7 +144,7 @@
     }
     .connector-line-dotted {
         width: 2px;
-        height: 25px;
+        height: 20px;
         border-left: 2px dotted #cbd5e1;
     }
     .connector-status-bubble {
@@ -187,13 +193,29 @@
         margin: 2px 0 0 0;
     }
     
-    /* Stepper Styling */
+    /* Stepper Styling with Horizontal Swipe on Mobile */
+    .stepper-scroll-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 6px;
+    }
+    .stepper-scroll-wrapper::-webkit-scrollbar {
+        height: 4px;
+    }
+    .stepper-scroll-wrapper::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
     .stepper-container {
-        padding: 15px 0;
+        padding: 15px 5px;
+        min-width: 680px;
     }
     .step-item {
         position: relative;
         z-index: 10;
+        min-width: 75px;
+        max-width: 90px;
     }
     .step-circle {
         width: 36px;
@@ -215,6 +237,52 @@
         margin: 0 -15px;
         z-index: 1;
         border-radius: 2px;
+    }
+
+    /* Mobile Overrides for Track View */
+    @media (max-width: 991.98px) {
+        #routing-map {
+            height: 320px !important;
+            border-radius: 16px !important;
+        }
+
+        .route-sidebar {
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            bottom: auto !important;
+            width: 100% !important;
+            border-radius: 16px !important;
+            padding: 14px !important;
+            margin-top: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+        }
+
+        .route-sidebar-cities-row {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 12px !important;
+        }
+
+        .city-img {
+            height: 80px !important;
+            border-radius: 10px !important;
+        }
+
+        .route-city-name {
+            font-size: 1.1rem !important;
+        }
+
+        .map-title-overlay {
+            display: none !important;
+        }
+
+        .map-live-badge {
+            top: 10px !important;
+            right: 10px !important;
+            padding: 6px 12px !important;
+            border-radius: 12px !important;
+        }
     }
     .step-active-1 { background: linear-gradient(135deg, #3b82f6, #60a5fa) !important; color: white !important; }
     .step-active-2 { background: linear-gradient(135deg, #6366f1, #818cf8) !important; color: white !important; }
@@ -419,51 +487,52 @@
                 <span class="fw-bold text-slate-700 small" style="font-size: 0.75rem; font-family: 'Outfit', sans-serif;">Live Tracking</span>
             </div>
             
-            <!-- Left Sidebar Overlay -->
+            <!-- Left Sidebar Overlay (Floating on desktop, neat card below on mobile) -->
             <div class="route-sidebar shadow animate-fade-in">
-                <!-- Origin city -->
-                <div class="route-location-block text-start">
-                    <span class="route-label-from">FROM</span>
-                    <h4 class="route-city-name fw-bold" style="font-family: 'Outfit', sans-serif;">{{ shipment.pickup_city | capitalize }}</h4>
-                    <img src="{{ url_for('static', filename=pickup_img) }}" class="city-img" alt="{{ shipment.pickup_city }}">
+                <div class="route-sidebar-cities-row">
+                    <!-- Origin city -->
+                    <div class="route-location-block text-start">
+                        <span class="route-label-from">FROM</span>
+                        <h4 class="route-city-name fw-bold" style="font-family: 'Outfit', sans-serif;">{{ shipment.pickup_city | capitalize }}</h4>
+                        <img src="{{ url_for('static', filename=pickup_img) }}" class="city-img" alt="{{ shipment.pickup_city }}">
+                    </div>
+                    
+                    <!-- Destination city -->
+                    <div class="route-location-block text-start">
+                        <span class="route-label-to">TO</span>
+                        <h4 class="route-city-name fw-bold" style="font-family: 'Outfit', sans-serif;">{{ shipment.receiver_city | capitalize }}</h4>
+                        <img src="{{ url_for('static', filename=receiver_img) }}" class="city-img" alt="{{ shipment.receiver_city }}">
+                    </div>
                 </div>
                 
                 <!-- Connector & Status bubble -->
                 <div class="route-status-connector">
-                    <div class="connector-dot bg-primary"></div>
-                    <div class="connector-line-dotted"></div>
-                    
                     <div class="connector-status-bubble">
                         <div class="status-bubble-icon">
                             <i class="fa-solid fa-truck"></i>
                         </div>
                         <div class="status-bubble-text">
                             <span class="status-title">Your order is</span>
-                            <span class="status-highlight text-primary fw-bold" style="font-size: 0.8rem;">{{ shipment.status }}!</span>
-                            <p class="status-desc" style="font-size: 0.6rem; margin-top: 1px;">Driver heading to destination</p>
+                            <span class="status-highlight text-primary fw-bold" style="font-size: 0.85rem;">{{ shipment.status }}!</span>
+                            <p class="status-desc" style="font-size: 0.65rem; margin-top: 1px;">Driver heading to destination</p>
                         </div>
                     </div>
-                    
-                    <div class="connector-line-dotted"></div>
-                    <div class="connector-dot bg-success"></div>
-                </div>
-                
-                <!-- Destination city -->
-                <div class="route-location-block text-start">
-                    <span class="route-label-to">TO</span>
-                    <h4 class="route-city-name fw-bold" style="font-family: 'Outfit', sans-serif;">{{ shipment.receiver_city | capitalize }}</h4>
-                    <img src="{{ url_for('static', filename=receiver_img) }}" class="city-img" alt="{{ shipment.receiver_city }}">
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row g-4 mb-5">
-    <!-- Horizontal Stepper Card -->
+<div class="row g-4 mb-4">
+    <!-- Horizontal Stepper Card (Touch-Swipeable on Mobile) -->
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 20px; min-height: 160px;">
-            <div class="d-flex justify-content-between align-items-center h-100 stepper-container">
+        <div class="card border-0 shadow-sm p-3 p-md-4 h-100" style="border-radius: 20px;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold text-primary mb-0 small" style="font-family: 'Outfit', sans-serif;"><i class="fa-solid fa-bars-progress me-1"></i>Delivery Milestones</h6>
+                <small class="text-muted d-lg-none" style="font-size: 0.7rem;"><i class="fa-solid fa-arrows-left-right me-1"></i>Swipe to view timeline</small>
+            </div>
+            <div class="stepper-scroll-wrapper">
+                <div class="d-flex justify-content-between align-items-center stepper-container">
                 
                 <!-- Step 1: Order Placed -->
                 <div class="step-item text-center">
@@ -557,6 +626,7 @@
                     <small class="text-muted" style="font-size: 0.6rem;">{{ ns_time.delivered }}</small>
                 </div>
                 
+            </div>
             </div>
         </div>
     </div>
@@ -752,26 +822,26 @@
                 <div class="d-flex justify-content-between pb-2"><b>Insurance Cover:</b> <span>{{ 'Covered' if shipment.insurance else 'None' }}</span></div>
             </div>
             
-            <div class="mt-4 d-flex justify-content-center gap-4">
+            <div class="mt-4 row g-3 text-center justify-content-center align-items-center">
                 {% if shipment.package_image_path %}
-                <div>
-                    <small class="text-muted d-block mb-1 text-center">Product Image</small>
+                <div class="col-4 col-sm-3">
+                    <small class="text-muted d-block mb-1 text-truncate" style="font-size: 0.72rem;">Cargo Photo</small>
                     <a href="#" data-bs-toggle="modal" data-bs-target="#imagePreviewModal" onclick="document.getElementById('modalPreviewImg').src='{{ url_for('static', filename=shipment.package_image_path) }}'; return false;" title="Tap to expand">
-                        <img src="{{ url_for('static', filename=shipment.package_image_path) }}" alt="Product Image" style="width: 100px; height: 100px; object-fit: cover; cursor: pointer;" class="border rounded bg-white p-1">
+                        <img src="{{ url_for('static', filename=shipment.package_image_path) }}" alt="Product Image" style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;" class="border rounded bg-white p-1 shadow-sm">
                     </a>
                 </div>
                 {% endif %}
                 {% if shipment.qr_code_path %}
-                <div>
-                    <small class="text-muted d-block mb-1 text-center">Receipt QR Code</small>
-                    <img src="{{ url_for('static', filename=shipment.qr_code_path) }}" alt="QR Code" style="width: 100px; height: 100px;" class="border rounded bg-white p-1">
+                <div class="col-4 col-sm-3">
+                    <small class="text-muted d-block mb-1 text-truncate" style="font-size: 0.72rem;">Receipt QR</small>
+                    <img src="{{ url_for('static', filename=shipment.qr_code_path) }}" alt="QR Code" style="width: 80px; height: 80px; object-fit: contain;" class="border rounded bg-white p-1 shadow-sm">
                 </div>
                 {% endif %}
                 {% if shipment.barcode_path %}
-                <div>
-                    <small class="text-muted d-block mb-1 text-center">Container Barcode</small>
-                    <img src="{{ url_for('static', filename=shipment.barcode_path) }}" alt="Barcode" style="width: 180px; height: 60px;" class="border rounded bg-white p-1">
-                    <a href="{{ url_for('customer.download_invoice', tracking_number=shipment.tracking_number) }}" class="btn btn-outline-secondary btn-sm d-block mt-2 fw-bold"><i class="fa-solid fa-file-pdf me-1"></i>Download PDF Invoice</a>
+                <div class="col-12 col-sm-6 text-center">
+                    <small class="text-muted d-block mb-1" style="font-size: 0.72rem;">Container Barcode</small>
+                    <img src="{{ url_for('static', filename=shipment.barcode_path) }}" alt="Barcode" style="max-height: 55px; max-width: 220px; width: 100%; object-fit: contain;" class="border rounded bg-white p-1 shadow-sm">
+                    <a href="{{ url_for('customer.download_invoice', tracking_number=shipment.tracking_number) }}" class="btn btn-outline-secondary btn-sm d-inline-block mt-2 fw-bold"><i class="fa-solid fa-file-pdf me-1"></i>Download PDF Invoice</a>
                 </div>
                 {% endif %}
             </div>
