@@ -205,27 +205,35 @@
 
     {% else %}
     <!-- Public Header & Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3 sticky-top shadow-sm">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center fw-bold" href="/">
+            <a class="navbar-brand d-flex align-items-center fw-bold text-warning" href="/">
                 <i class="fa-solid fa-truck-ramp-box fa-lg me-2 text-warning"></i> LogiTrack
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="dropdown" data-bs-target="#public-nav" aria-controls="public-nav" aria-expanded="false" aria-label="Toggle navigation">
+
+            <!-- Prominent Quick Login for Mobile Screens -->
+            <div class="d-flex align-items-center gap-2 d-lg-none ms-auto me-2">
+                <a class="btn btn-warning btn-sm fw-bold px-3 text-dark" href="{{ url_for('auth.login') }}">
+                    <i class="fa-solid fa-right-to-bracket me-1"></i> Login
+                </a>
+            </div>
+
+            <button class="navbar-toggler border-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#public-nav" aria-controls="public-nav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="public-nav">
-                <ul class="navbar-nav ms-auto gap-2">
+                <ul class="navbar-nav ms-auto gap-2 align-items-lg-center mt-3 mt-lg-0">
                     <li class="nav-item">
-                        <a class="nav-link" href="/"><i class="fa-solid fa-house me-1"></i> Home</a>
+                        <a class="nav-link px-2" href="/"><i class="fa-solid fa-house me-1"></i> Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('customer.public_track') }}"><i class="fa-solid fa-magnifying-glass-location me-1"></i> Track Parcel</a>
+                        <a class="nav-link px-2" href="{{ url_for('customer.public_track') }}"><i class="fa-solid fa-magnifying-glass-location me-1"></i> Track Parcel</a>
+                    </li>
+                    <li class="nav-item d-none d-lg-block">
+                        <a class="btn btn-outline-warning btn-sm px-3" href="{{ url_for('auth.login') }}"><i class="fa-solid fa-right-to-bracket me-1"></i> Login</a>
                     </li>
                     <li class="nav-item">
-                        <a class="btn btn-outline-warning text-white btn-sm px-3 mt-1" href="{{ url_for('auth.login') }}"><i class="fa-solid fa-right-to-bracket me-1"></i> Login</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-warning btn-sm px-3 mt-1" href="{{ url_for('auth.register') }}"><i class="fa-solid fa-user-plus me-1"></i> Signup</a>
+                        <a class="btn btn-warning btn-sm px-3 text-dark fw-bold w-100 w-lg-auto" href="{{ url_for('auth.register') }}"><i class="fa-solid fa-user-plus me-1"></i> Sign Up</a>
                     </li>
                 </ul>
             </div>
