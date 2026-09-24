@@ -13,8 +13,9 @@ from . import customer_bp
 def dashboard():
     customer = Customer.query.filter_by(user_id=g.user.id).first()
     if not customer:
-        flash("Customer profile not found. Please contact support.", "danger")
-        return redirect(url_for('auth.logout'))
+        customer = Customer(user_id=g.user.id, phone="N/A", status='Active')
+        db.session.add(customer)
+        db.session.commit()
         
     # Get stats
     total_booked = Shipment.query.filter_by(customer_id=customer.id).count()

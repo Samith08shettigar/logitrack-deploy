@@ -42,6 +42,12 @@ ENV/
 Thumbs.db
 .gemini/
 
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+app/*.db
+
 # Reports & scratch files
 Logi_Track-reports/
 scratch/
